@@ -124,7 +124,7 @@ const Dashboard = () => {
       if (errorTypeChart) errorTypeChart.destroy();
       if (gradeChart) gradeChart.destroy();
     };
-  }, [activePage]); // Re-run effect when activePage changes
+  }, [activePage]);
 
   const handleInvestigate = (institution, grade) => {
     setActivePage({ type: 'investigation', institution, grade });
@@ -135,12 +135,17 @@ const Dashboard = () => {
   };
 
   const handleBack = () => {
-    window.location.reload(); // Refresh the page on back button click
+    setActivePage(null);
   };
 
   return (
-    <div className='p-6'>
-      {/* {!activePage ? ( */}
+    <div
+      className='p-6'
+      style={{
+        filter: `blur(5px)`,
+        transition: 'filter 0.3s ease', // Smooth transition for blur effect
+      }}
+    >
         <>
           <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8'>
             <div className='bg-white p-6 rounded-xl shadow-sm flex items-center justify-between'>
