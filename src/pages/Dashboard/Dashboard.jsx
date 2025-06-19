@@ -78,39 +78,178 @@ const Dashboard = () => {
     ],
   };
 
-  useEffect(() => {
-    let errorTypeChart, gradeChart;
+  const computedData = (() => {
+    if (!dashboardData || !dashboardData['Postgre Metadata']) return null;
 
-    if (!chartInitialized && !activePage) {
-      const gradeCtx = gradeBarChartRef.current.getContext('2d');
-      gradeChart = new Chart(gradeCtx, {
-        type: 'bar',
-        data: mockData.gradeDistribution,
-        options: {
-          responsive: true,
-          indexAxis: 'y',
-          scales: {
-            x: {
-              beginAtZero: true,
-              title: { display: true, text: 'Data Count' },
-              ticks: { callback: (value) => `${value / 1000}k` },
-            },
-          },
-          plugins: {
-            legend: { position: 'bottom' },
-          },
+    const records = dashboardData['Postgre Metadata'];
+
+    const totalBatches = records.length;
+    const awaitingAction = records.filter(
+      (r) => r.status_proses.toLowerCase() === 'awaiting action'
+    ).length;
+    const inProgress = records.filter(
+      (r) => r.status_proses.toLowerCase() === 'in progress'
+    ).length;
+    const completed = records.filter(
+      (r) => r.status_proses.toLowerCase() === 'completed'
+    ).length;
+
+    const gradeCounts = { A: 0, B: 0, C: 0, D: 0, E: 0 };
+    records.forEach((r) => {
+      const grade = r.grade.toUpperCase();
+      if (gradeCounts[grade] !== undefined) {
+        gradeCounts[grade] += r.total_records;
+      }
+    });
+
+    const gradeDistribution = {
+      labels: ['Grade A', 'Grade B', 'Grade C', 'Grade D', 'Grade E'],
+      datasets: [
+        {
+          label: 'Data Count',
+          data: [
+            gradeCounts.A,
+            gradeCounts.B,
+            gradeCounts.C,
+            gradeCounts.D,
+            gradeCounts.E,
+          ],
+          backgroundColor: [
+            '#10b981', // A
+            '#f59e0b', // B
+            '#f97316', // C
+            '#ef4444', // D
+            '#8b5cf6', // E
+          ],
         },
-      });
-
-      setChartInitialized(true);
-    }
-
-    // Cleanup function
-    return () => {
-      if (errorTypeChart) errorTypeChart.destroy();
-      if (gradeChart) gradeChart.destroy();
+      ],
     };
-  }, [activePage]);
+
+    const recentBatches = [...records]
+      .sort((a, b) => new Date(b.insert_date) - new Date(a.insert_date))
+      .slice(0, 3)
+      .map((r) => ({
+        institution: r.institution_name,
+        status:
+          r.status_proses.toLowerCase() === 'awaiting action'
+            ? 'Awaiting Action'
+            : r.status_proses.toLowerCase() === 'in progress'
+            ? 'In Progress'
+            : 'Completed',
+        grade: r.grade,
+      }));
+
+    return {
+      totalBatches,
+      awaitingAction,
+      inProgress,
+      completed,
+      gradeDistribution,
+      recentBatches,
+    };
+  })();
+
+  useEffect(() => {
+    const ctx = gradeBarChartRef.current?.getContext('2d');
+    if (!ctx) return;
+
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['A', 'B', 'C'],
+        datasets: [
+          {
+            label: 'Sample',
+            data: [10, 20, 30],
+            backgroundColor: ['red', 'green', 'blue'],
+          },
+        ],
+      },
+    });
+  }, []);
+  
+  
+  
+  // useEffect(() => {
+  //   let gradeChart;
+
+  //   if (
+  //     computedData &&
+  //     computedData.gradeDistribution &&
+  //     gradeBarChartRef.current &&
+  //     !chartInitialized &&
+  //     !activePage
+  //   ) {
+  //     const ctx = gradeBarChartRef.current.getContext('2d');
+
+  //     gradeChart = new Chart(ctx, {
+  //       type: 'bar',
+  //       data: computedData.gradeDistribution,
+  //       options: {
+  //         responsive: true,
+  //         indexAxis: 'y',
+  //         scales: {
+  //           x: {
+  //             beginAtZero: true,
+  //             title: { display: true, text: 'Data Count' },
+  //             ticks: {
+  //               callback: (value) => `${value / 1000}k`,
+  //             },
+  //           },
+  //         },
+  //         plugins: {
+  //           legend: {
+  //             position: 'bottom',
+  //           },
+  //         },
+  //       },
+  //     });
+
+  //     setChartInitialized(true);
+  //   }
+
+  //   return () => {
+  //     if (gradeChart) {
+  //       gradeChart.destroy();
+  //     }
+  //   };
+  // }, [computedData, chartInitialized, activePage]);
+  
+
+  // useEffect(() => {
+  //   let errorTypeChart, gradeChart;
+
+  //   if (!chartInitialized && !activePage) {
+  //     const gradeCtx = gradeBarChartRef.current.getContext('2d');
+  //     gradeChart = new Chart(gradeCtx, {
+  //       type: 'bar',
+  //       data: mockData.gradeDistribution,
+  //       // data: computedData?.gradeDistribution,
+  //       options: {
+  //         responsive: true,
+  //         indexAxis: 'y',
+  //         scales: {
+  //           x: {
+  //             beginAtZero: true,
+  //             title: { display: true, text: 'Data Count' },
+  //             ticks: { callback: (value) => `${value / 1000}k` },
+  //           },
+  //         },
+  //         plugins: {
+  //           legend: { position: 'bottom' },
+  //         },
+  //       },
+  //     });
+
+  //     setChartInitialized(true);
+  //   }
+
+  //   // Cleanup function
+  //   return () => {
+  //     if (errorTypeChart) errorTypeChart.destroy();
+  //     if (gradeChart) gradeChart.destroy();
+  //   };
+  // }, [activePage]);
 
   const handleInvestigate = (institution, grade) => {
     setActivePage({ type: 'investigation', institution, grade });
@@ -151,7 +290,7 @@ const Dashboard = () => {
               <p className='text-sm font-medium text-slate-500'>
                 Total Batches In
               </p>
-              <p className='text-3xl font-bold'>{mockData.totalBatches}</p>
+              <p className='text-3xl font-bold'>{computedData?.totalBatches}</p>
             </div>
             <div className='bg-blue-100 p-3 rounded-full'>
               <Layers className='text-blue-600' />
@@ -162,7 +301,9 @@ const Dashboard = () => {
               <p className='text-sm font-medium text-slate-500'>
                 Awaiting Action
               </p>
-              <p className='text-3xl font-bold'>{mockData.awaitingAction}</p>
+              <p className='text-3xl font-bold'>
+                {computedData?.awaitingAction}
+              </p>
             </div>
             <div className='bg-yellow-100 p-3 rounded-full'>
               <Loader2 className='text-yellow-600 w-6 h-6' />
@@ -171,7 +312,7 @@ const Dashboard = () => {
           <div className='bg-white p-6 rounded-xl shadow-sm flex items-center justify-between'>
             <div>
               <p className='text-sm font-medium text-slate-500'>In Progress</p>
-              <p className='text-3xl font-bold'>{mockData.inProgress}</p>
+              <p className='text-3xl font-bold'>{computedData?.inProgress}</p>
             </div>
             <div className='bg-orange-100 p-3 rounded-full'>
               <FileCog className='text-orange-600 w-6 h-6' />
@@ -180,7 +321,7 @@ const Dashboard = () => {
           <div className='bg-white p-6 rounded-xl shadow-sm flex items-center justify-between'>
             <div>
               <p className='text-sm font-medium text-slate-500'>Completed</p>
-              <p className='text-3xl font-bold'>{mockData.completed}</p>
+              <p className='text-3xl font-bold'>{computedData?.completed}</p>
             </div>
             <div className='bg-green-100 p-3 rounded-full'>
               <CheckCheck className='text-green-600 w-6 h-6' />
@@ -198,12 +339,18 @@ const Dashboard = () => {
               ></canvas> */}
 
             <h3 className='font-semibold text-lg mb-4'>Data Count per Grade</h3>
-            <canvas
+            {/* <canvas
               id='gradeBarChart'
               ref={gradeBarChartRef}
               // style={{ height: '250px', width: '100%' }}
               className='h-[40vh] md:h-[30vh] lg:h-[25vh] w-full'
-            ></canvas>
+            ></canvas> */}
+            {computedData?.gradeDistribution && (
+              <canvas
+                ref={gradeBarChartRef}
+                className='h-[40vh] md:h-[30vh] lg:h-[25vh] w-full'
+              />
+            )}
           </div>
 
           <div className='xl:col-span-1 bg-white p-6 rounded-xl shadow-sm'>
@@ -218,7 +365,7 @@ const Dashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {mockData.recentBatches.map((batch, index) => (
+                  {computedData?.recentBatches.map((batch, index) => (
                     <tr
                       key={index}
                       className='bg-white border-b border-slate-300 hover:bg-slate-50'
