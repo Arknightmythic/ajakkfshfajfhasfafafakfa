@@ -4,12 +4,14 @@ import { Loader2 } from 'lucide-react';
 import { FileCog } from 'lucide-react';
 import { CheckCheck } from 'lucide-react';
 import Chart from 'chart.js/auto';
+import useDashboard from './hooks/useDashboard'; 
 
 const Dashboard = () => {
   const [activePage, setActivePage] = useState(null);
   const errorTypeLineChartRef = useRef(null);
   const gradeBarChartRef = useRef(null);
   const [chartInitialized, setChartInitialized] = useState(false);
+  const { dashboardData, loading, error } = useDashboard();
 
   const mockData = {
     totalBatches: 124,
@@ -80,27 +82,7 @@ const Dashboard = () => {
     let errorTypeChart, gradeChart;
 
     if (!chartInitialized && !activePage) {
-      const errorTypeCtx = errorTypeLineChartRef.current.getContext('2d');
       const gradeCtx = gradeBarChartRef.current.getContext('2d');
-
-      errorTypeChart = new Chart(errorTypeCtx, {
-        type: 'line',
-        data: mockData.errorTypeTrends,
-        options: {
-          responsive: true,
-          scales: {
-            y: {
-              beginAtZero: true,
-              title: { display: true, text: 'Count' },
-              ticks: { stepSize: 400 },
-            },
-          },
-          plugins: {
-            legend: { position: 'bottom' },
-          },
-        },
-      });
-
       gradeChart = new Chart(gradeCtx, {
         type: 'bar',
         data: mockData.gradeDistribution,
@@ -108,7 +90,11 @@ const Dashboard = () => {
           responsive: true,
           indexAxis: 'y',
           scales: {
-            x: { beginAtZero: true, title: { display: true, text: 'Count' } },
+            x: {
+              beginAtZero: true,
+              title: { display: true, text: 'Data Count' },
+              ticks: { callback: (value) => `${value / 1000}k` },
+            },
           },
           plugins: {
             legend: { position: 'bottom' },
@@ -138,137 +124,146 @@ const Dashboard = () => {
     setActivePage(null);
   };
 
+  useEffect(() => {
+    if (dashboardData) {
+      console.log('Dashboard Data:', dashboardData);
+    }
+  }, [dashboardData]);
+  
+
   return (
-    <div
-      className='p-6'
-      style={{
-        filter: `blur(5px)`,
-        transition: 'filter 0.3s ease', // Smooth transition for blur effect
-      }}
-    >
-        <>
-          <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8'>
-            <div className='bg-white p-6 rounded-xl shadow-sm flex items-center justify-between'>
-              <div>
-                <p className='text-sm font-medium text-slate-500'>
-                  Total Batches In
-                </p>
-                <p className='text-3xl font-bold'>{mockData.totalBatches}</p>
-              </div>
-              <div className='bg-blue-100 p-3 rounded-full'>
-                <Layers className='text-blue-600' />
-              </div>
+    <div className='p-6'>
+      <>
+        {/* tampilkan data hasil fetch */}
+        {error && <div className='text-red-600 mb-4'>Error: {error}</div>}
+
+        {dashboardData && (
+          <pre className='bg-gray-100 text-sm p-4 rounded mb-6 overflow-x-auto'>
+            {JSON.stringify(dashboardData, null, 2)}
+          </pre>
+        )}
+
+        {/* ...lanjutan dashboard yang sudah kamu buat */}
+        {/* mulai dari <div className='grid grid-cols-1 sm:grid-cols-2 ... dst */}
+        <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8'>
+          <div className='bg-white p-6 rounded-xl shadow-sm flex items-center justify-between'>
+            <div>
+              <p className='text-sm font-medium text-slate-500'>
+                Total Batches In
+              </p>
+              <p className='text-3xl font-bold'>{mockData.totalBatches}</p>
             </div>
-            <div className='bg-white p-6 rounded-xl shadow-sm flex items-center justify-between'>
-              <div>
-                <p className='text-sm font-medium text-slate-500'>
-                  Awaiting Action
-                </p>
-                <p className='text-3xl font-bold'>{mockData.awaitingAction}</p>
-              </div>
-              <div className='bg-yellow-100 p-3 rounded-full'>
-                <Loader2 className='text-yellow-600 w-6 h-6 animate-spin' />
-              </div>
-            </div>
-            <div className='bg-white p-6 rounded-xl shadow-sm flex items-center justify-between'>
-              <div>
-                <p className='text-sm font-medium text-slate-500'>
-                  In Progress
-                </p>
-                <p className='text-3xl font-bold'>{mockData.inProgress}</p>
-              </div>
-              <div className='bg-orange-100 p-3 rounded-full'>
-                <FileCog className='text-orange-600 w-6 h-6' />
-              </div>
-            </div>
-            <div className='bg-white p-6 rounded-xl shadow-sm flex items-center justify-between'>
-              <div>
-                <p className='text-sm font-medium text-slate-500'>Completed</p>
-                <p className='text-3xl font-bold'>{mockData.completed}</p>
-              </div>
-              <div className='bg-green-100 p-3 rounded-full'>
-                <CheckCheck className='text-green-600 w-6 h-6' />
-              </div>
+            <div className='bg-blue-100 p-3 rounded-full'>
+              <Layers className='text-blue-600' />
             </div>
           </div>
-          <div className='grid grid-cols-1 xl:grid-cols-3 gap-8'>
-            <div className='xl:col-span-2 bg-white p-6 rounded-xl shadow-sm'>
-              <h3 className='font-semibold text-lg mb-4'>
+          <div className='bg-white p-6 rounded-xl shadow-sm flex items-center justify-between'>
+            <div>
+              <p className='text-sm font-medium text-slate-500'>
+                Awaiting Action
+              </p>
+              <p className='text-3xl font-bold'>{mockData.awaitingAction}</p>
+            </div>
+            <div className='bg-yellow-100 p-3 rounded-full'>
+              <Loader2 className='text-yellow-600 w-6 h-6' />
+            </div>
+          </div>
+          <div className='bg-white p-6 rounded-xl shadow-sm flex items-center justify-between'>
+            <div>
+              <p className='text-sm font-medium text-slate-500'>In Progress</p>
+              <p className='text-3xl font-bold'>{mockData.inProgress}</p>
+            </div>
+            <div className='bg-orange-100 p-3 rounded-full'>
+              <FileCog className='text-orange-600 w-6 h-6' />
+            </div>
+          </div>
+          <div className='bg-white p-6 rounded-xl shadow-sm flex items-center justify-between'>
+            <div>
+              <p className='text-sm font-medium text-slate-500'>Completed</p>
+              <p className='text-3xl font-bold'>{mockData.completed}</p>
+            </div>
+            <div className='bg-green-100 p-3 rounded-full'>
+              <CheckCheck className='text-green-600 w-6 h-6' />
+            </div>
+          </div>
+        </div>
+        <div className='grid grid-cols-1 xl:grid-cols-2 gap-8'>
+          <div className='xl:col-span-1 bg-white p-6 rounded-xl shadow-sm flex-1'>
+            {/* <h3 className='font-semibold text-lg mb-4'>
                 Error Type Trends (Last 7 Days)
-              </h3>
-              <canvas
+              </h3> */}
+            {/* <canvas
                 id='errorTypeLineChart'
                 ref={errorTypeLineChartRef}
-              ></canvas>
-            </div>
-            <div className='xl:col-span-1 bg-white p-6 rounded-xl shadow-sm'>
-              <h3 className='font-semibold text-lg mb-4'>
-                Data Count per Grade
-              </h3>
-              <canvas
-                id='gradeBarChart'
-                ref={gradeBarChartRef}
-                style={{ height: '400px', width: '100%' }}
-              ></canvas>
-            </div>
-            <div className='xl:col-span-3 bg-white p-6 rounded-xl shadow-sm'>
-              <h3 className='font-semibold text-lg mb-4'>Recent Batches</h3>
-              <div className='overflow-x-auto'>
-                <table className='w-full text-sm text-left'>
-                  <thead className='text-xs text-slate-500 uppercase bg-slate-50'>
-                    <tr>
-                      <th className='px-6 py-3'>Ministry/Institution</th>
-                      <th className='px-6 py-3'>Status</th>
-                      <th className='px-6 py-3 text-center'>Action</th>
+              ></canvas> */}
+
+            <h3 className='font-semibold text-lg mb-4'>Data Count per Grade</h3>
+            <canvas
+              id='gradeBarChart'
+              ref={gradeBarChartRef}
+              // style={{ height: '250px', width: '100%' }}
+              className='h-[40vh] md:h-[30vh] lg:h-[25vh] w-full'
+            ></canvas>
+          </div>
+
+          <div className='xl:col-span-1 bg-white p-6 rounded-xl shadow-sm'>
+            <h3 className='font-semibold text-lg mb-4'>Recent Batches</h3>
+            <div className='overflow-x-auto'>
+              <table className='w-full text-sm text-left'>
+                <thead className='text-xs text-slate-500 uppercase bg-slate-50'>
+                  <tr>
+                    <th className='px-6 py-3'>Ministry/Institution</th>
+                    <th className='px-6 py-3'>Status</th>
+                    <th className='px-6 py-3 text-center'>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mockData.recentBatches.map((batch, index) => (
+                    <tr
+                      key={index}
+                      className='bg-white border-b border-slate-300 hover:bg-slate-50'
+                    >
+                      <td className='px-6 py-4 font-medium'>
+                        {batch.institution}
+                      </td>
+                      <td className='px-6 py-4'>
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            batch.status === 'Awaiting Action'
+                              ? 'bg-red-100 text-red-800'
+                              : batch.status === 'In Progress'
+                              ? 'bg-orange-100 text-orange-800'
+                              : 'bg-green-100 text-green-800'
+                          }`}
+                        >
+                          {batch.status}
+                        </span>
+                      </td>
+                      <td className='px-6 py-4 text-center'>
+                        <button
+                          onClick={() =>
+                            batch.status === 'Completed'
+                              ? handleView(batch.institution, batch.grade)
+                              : handleInvestigate(
+                                  batch.institution,
+                                  batch.grade
+                                )
+                          }
+                          className='font-medium text-blue-600 hover:underline'
+                        >
+                          {batch.status === 'Completed'
+                            ? 'View'
+                            : 'Investigate'}
+                        </button>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {mockData.recentBatches.map((batch, index) => (
-                      <tr
-                        key={index}
-                        className='bg-white border-b hover:bg-slate-50'
-                      >
-                        <td className='px-6 py-4 font-medium'>
-                          {batch.institution}
-                        </td>
-                        <td className='px-6 py-4'>
-                          <span
-                            className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              batch.status === 'Awaiting Action'
-                                ? 'bg-red-100 text-red-800'
-                                : batch.status === 'In Progress'
-                                ? 'bg-orange-100 text-orange-800'
-                                : 'bg-green-100 text-green-800'
-                            }`}
-                          >
-                            {batch.status}
-                          </span>
-                        </td>
-                        <td className='px-6 py-4 text-center'>
-                          <button
-                            onClick={() =>
-                              batch.status === 'Completed'
-                                ? handleView(batch.institution, batch.grade)
-                                : handleInvestigate(
-                                    batch.institution,
-                                    batch.grade
-                                  )
-                            }
-                            className='font-medium text-blue-600 hover:underline'
-                          >
-                            {batch.status === 'Completed'
-                              ? 'View'
-                              : 'Investigate'}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
-        </>
+        </div>
+      </>
     </div>
   );
 };
