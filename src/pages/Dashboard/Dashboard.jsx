@@ -45,7 +45,7 @@ const Dashboard = () => {
     raw.forEach((item) => {
       const gradeKey = `Grade ${item.grade.toUpperCase()}`;
       if (gradeCounts.hasOwnProperty(gradeKey)) {
-        gradeCounts[gradeKey] += item.total_records;
+        gradeCounts[gradeKey] += 1;
       }
     });
 
