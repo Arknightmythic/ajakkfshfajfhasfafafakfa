@@ -9,7 +9,7 @@ const useDashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const response = await axiosInstance.dashboardapi.get('/api/all');
+        const response = await axiosInstance.dashboardapi.get('/dashboardApi/all');
         setDashboardData(response.data);
       } catch (err) {
         setError(
