@@ -1,4 +1,3 @@
-// axiosInstance.js
 import axios from 'axios';
 
 const createAxiosInstance = (baseURL) => {
@@ -15,9 +14,5 @@ const createAxiosInstance = (baseURL) => {
 const axiosInstance = {
   dashboardapi: createAxiosInstance(import.meta.env.VITE_DASHBOARD_API_URL),
 };
-
-console.log('API base:', import.meta.env.VITE_DASHBOARD_API_URL);
-console.log('axiosInstance:', axiosInstance);
-console.log('dashboardapi:', axiosInstance.dashboardapi);
 
 export default axiosInstance;
