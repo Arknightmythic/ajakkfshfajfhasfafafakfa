@@ -12,10 +12,9 @@ const Sidebar = () => {
     setCurrentPath(location.pathname);
   }, [location.pathname]);
 
-  const isActive = (path) => {
-    return currentPath === path;
-  };
-
+    const isActive = (path) => {
+      return currentPath === path || currentPath.startsWith(path + '/');
+    };
 
   return (
     <nav className="w-64 bg-slate-900 text-slate-300 flex flex-col fixed h-full">
