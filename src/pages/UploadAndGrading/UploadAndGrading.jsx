@@ -18,6 +18,7 @@ const UploadAndGrading = () => {
     total: 1000,
     grade: 'Grade A',
     status: 'Grading Complete',
+    is_sync: '1',
   },
   {
     institution: 'Ministry of Education',
@@ -25,6 +26,7 @@ const UploadAndGrading = () => {
     total: 750,
     grade: 'Grade B',
     status: 'Grading Complete',
+    is_sync: '0',
   },
   {
     institution: 'Ministry of Health',
@@ -32,6 +34,7 @@ const UploadAndGrading = () => {
     total: 500,
     grade: 'Grade C',
     status: 'Grading Complete',
+    is_sync: '0',    
   },
   {
     institution: 'Ministry of Transport',
@@ -39,6 +42,7 @@ const UploadAndGrading = () => {
     total: 300,
     grade: 'Grade D',
     status: 'Grading Complete',
+    is_sync: '0',
   },
   {
     institution: 'Ministry of Transport',
@@ -46,6 +50,7 @@ const UploadAndGrading = () => {
     total: 300,
     grade: 'Grade E',
     status: 'Grading Complete',
+    is_sync: '0',
   },
   ];
 
@@ -220,7 +225,15 @@ const UploadAndGrading = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <button className="font-medium text-blue-600 hover:underline cursor-pointer">Start Synchronization</button>
+                    <button
+                      disabled={item.is_sync === "1"}
+                      // onClick={() => handleSync(item.id)}
+                      className={`font-medium text-blue-600 hover:underline ${
+                        item.is_sync === "1" ? "cursor-not-allowed text-slate-400 hover:no-underline" : "cursor-pointer"
+                      }`}
+                    >
+                      Start Synchronization
+                    </button>
                   </td>
                 </tr>
               ))}
