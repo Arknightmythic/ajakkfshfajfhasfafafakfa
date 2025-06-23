@@ -13,44 +13,52 @@ const Dashboard = () => {
   const { dashboardData, loading, error } = useDashboard();
 
   const computedData = useMemo(() => {
-    if (!dashboardData || !dashboardData['Postgre Metadata']) return null;
-
-    const raw = dashboardData['Postgre Metadata'];
+    if (!dashboardData) {
+      return null;
+    }
+    const raw = dashboardData?.data || [];
     const gradeCounts = {
       'Grade A': 0,
       'Grade B': 0,
       'Grade C': 0,
       'Grade D': 0,
       'Grade E': 0,
+      'Grade ERROR': 0,
     };
 
     const totalBatches = raw.length;
-    const awaitingAction = raw.filter(
-      (r) => r.status_proses.toLowerCase() === 'awaiting action'
-    ).length;
-    const inProgress = raw.filter(
-      (r) => r.status_proses.toLowerCase() === 'in progress'
-    ).length;
     const completed = raw.filter(
-      (r) => r.status_proses.toLowerCase() === 'completed'
+      (r) => String(r.status_grading).toLowerCase() === 'completed'
     ).length;
 
-    // raw.forEach((item) => {
-    //   const gradeKey = `Grade ${item.grade.toUpperCase()}`;
-    //   if (gradeCounts.hasOwnProperty(gradeKey)) {
-    //     gradeCounts[gradeKey] += item.total_records;
-    //   }
-    // });
+    const failed = raw.filter(
+      (r) => String(r.status_grading).toLowerCase() === 'failed'
+    ).length;
+
+    const inProgress = raw.filter(
+      (r) =>
+        r.status_grading?.toLowerCase() === 'in_progress' ||
+        r.status_grading?.toLowerCase() === 'processing'
+    ).length;
 
     raw.forEach((item) => {
-      const gradeKey = `Grade ${item.grade.toUpperCase()}`;
-      if (gradeCounts.hasOwnProperty(gradeKey)) {
-        gradeCounts[gradeKey] += 1;
+      const grade = item.grade?.toUpperCase();
+      if (grade === 'ERROR') {
+        gradeCounts['Grade ERROR'] += 1;
+      } else if (['A', 'B', 'C', 'D', 'E'].includes(grade)) {
+        gradeCounts[`Grade ${grade}`] += 1;
       }
     });
 
     const gradeDistribution = {
-      labels: ['Grade A', 'Grade B', 'Grade C', 'Grade D', 'Grade E'],
+      labels: [
+        'Grade A',
+        'Grade B',
+        'Grade C',
+        'Grade D',
+        'Grade E',
+        'Grade ERROR',
+      ],
       datasets: [
         {
           label: 'Data Count',
@@ -60,42 +68,61 @@ const Dashboard = () => {
             gradeCounts['Grade C'],
             gradeCounts['Grade D'],
             gradeCounts['Grade E'],
+            gradeCounts['Grade ERROR'],
           ],
           backgroundColor: [
-            '#10b981',
-            '#f59e0b',
-            '#f97316',
-            '#ef4444',
-            '#8b5cf6',
+            '#10b981', // Green
+            '#f59e0b', // Yellow
+            '#f97316', // Orange
+            '#ef4444', // Red
+            '#8b5cf6', // Purple
+            '#6b7280', // Gray for ERROR
           ],
         },
       ],
     };
 
-    const formatStatus = (status) => {
-      if (!status) return 'Unknown';
-      const s = status.toLowerCase();
-      if (s.includes('await')) return 'Awaiting Action';
-      if (s.includes('progress')) return 'In Progress';
-      if (s.includes('complete')) return 'Completed';
-      return status;
+    const formatStatus = (statusGrading, statusProses) => {
+      if (statusProses) {
+        const s = statusProses.toLowerCase();
+        if (s === 'completed') return 'Completed';
+        if (s === 'failed') return 'Failed';
+        if (s === 'in_progress' || s === 'processing') return 'In Progress';
+      }
+      return statusProses || '';
     };
 
+    const today = new Date().toISOString().split('T')[0]; 
     const recentBatches = raw
-      .sort((a, b) => new Date(b.insert_date) - new Date(a.insert_date))
-      .slice(0, 3);
+      .filter((item) => item.inserted_date?.startsWith(today))
+      .sort(
+        (a, b) =>
+          new Date(b.inserted_date).getTime() -
+          new Date(a.inserted_date).getTime()
+      );
 
     return {
       totalBatches,
-      awaitingAction,
-      inProgress,
       completed,
+      failed,
+      inProgress,
+      awaitingAction: 0, 
       gradeDistribution,
       recentBatches: recentBatches.map((item) => ({
+        id: item.id,
         institution: item.institution_name,
-        status: formatStatus(item.status_proses),
+        fileName: item.file_name,
+        status: formatStatus(item.status_grading, item.status_proses),
         grade: item.grade,
+        totalRecords: item.total_records,
+        insertedDate: item.inserted_date,
       })),
+      totalRecords: raw.reduce(
+        (sum, item) => sum + (item.total_records || 0),
+        0
+      ),
+      successRate:
+        totalBatches > 0 ? ((completed / totalBatches) * 100).toFixed(1) : 0,
     };
   }, [dashboardData]);
 
@@ -103,19 +130,11 @@ const Dashboard = () => {
     !computedData?.gradeDistribution ||
     !computedData.gradeDistribution.datasets?.[0]?.data?.some((val) => val > 0);
 
-  // Effect untuk membuat chart
   useEffect(() => {
-    // Destroy existing chart jika ada
     if (gradeChartInstance.current) {
       gradeChartInstance.current.destroy();
       gradeChartInstance.current = null;
     }
-
-    // Hanya buat chart jika:
-    // 1. Tidak ada active page
-    // 2. Ada computed data
-    // 3. Canvas ref tersedia
-    // 4. Tidak sedang loading
     if (
       !activePage &&
       computedData?.gradeDistribution &&
@@ -124,8 +143,6 @@ const Dashboard = () => {
     ) {
       const canvas = gradeBarChartRef.current;
       const ctx = canvas.getContext('2d');
-
-      console.log('Creating chart with data:', computedData.gradeDistribution);
 
       try {
         gradeChartInstance.current = new Chart(ctx, {
@@ -163,7 +180,7 @@ const Dashboard = () => {
             },
             plugins: {
               legend: {
-                display: false, // Hide legend karena sudah jelas dari labels
+                display: false,
               },
               tooltip: {
                 callbacks: {
@@ -179,8 +196,6 @@ const Dashboard = () => {
             },
           },
         });
-
-        console.log('Chart created successfully:', gradeChartInstance.current);
       } catch (error) {
         console.error('Error creating chart:', error);
       }
@@ -207,7 +222,6 @@ const Dashboard = () => {
     setActivePage(null);
   };
 
-  // Loading state
   if (loading) {
     return (
       <div className='p-6 flex items-center justify-center min-h-[400px]'>
@@ -219,7 +233,6 @@ const Dashboard = () => {
     );
   }
 
-  // Error state
   if (error) {
     return (
       <div className='p-6'>
@@ -323,12 +336,13 @@ const Dashboard = () => {
                   computedData.recentBatches.map((batch, index) => (
                     <tr
                       key={index}
-                      className='bg-white border-b border-slate-300 hover:bg-slate-50'
+                      className='bg-white border-b border-slate-200 hover:bg-slate-50'
                     >
                       <td className='px-6 py-4 font-medium'>
                         {batch.institution}
                       </td>
                       <td className='px-6 py-4 whitespace-nowrap'>
+                      {batch.status ? (
                         <span
                           className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             batch.status === 'Awaiting Action'
@@ -340,6 +354,9 @@ const Dashboard = () => {
                         >
                           {batch.status}
                         </span>
+                      ) : (
+                        <span className='text-slate-500'></span>
+                      )}
                       </td>
                       <td className='px-6 py-4 text-center'>
                         <button

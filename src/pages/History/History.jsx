@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Search, Download, FileText, Calendar, Filter } from 'lucide-react';
 import RangeCalendarFilter from './Calendar';
 import useHistory from './hooks/useHistory';
+import useDownload from './hooks/useDownload';
 import { use } from 'react';
 
 const History = () => {
@@ -14,15 +15,26 @@ const History = () => {
     startDate: null,
     endDate: null,
   });
+  // const {
+  //   downloadData,
+  //   loading: downloadLoading,
+  //   error: downloadError,
+  // } = useDownload();
 
-  const handleDownloadMatched = () => {
-    alert('Mengunduh data yang cocok...');
-    // Add your download matched logic here
+  const handleDownloadMatched = (item) => {
+    // if (!loading && !downloadLoading) {
+    //   downloadData(item, 'matched');
+    // }
+    alert('Downloading Matched data for item:' + item.id);
+    
   };
 
-  const handleDownloadUnmatched = () => {
-    alert('Mengunduh data yang tidak cocok...');
-    // Add your download unmatched logic here
+  const handleDownloadUnmatched = (item) => {
+    // if (!loading && !downloadLoading) {
+    //   downloadData(item, 'unmatched');
+    // }
+    alert('Downloading Unmatched data for item:' + item.id);
+    
   };
 
   const handleSort = (field) => {
@@ -337,14 +349,14 @@ const History = () => {
                     </td>
                     <td className='flex px-6 py-4 text-center space-x-2'>
                       <button
-                        onClick={handleDownloadMatched}
-                        className='bg-blue-600 text-white px-2 py-1 rounded-md hover:bg-blue-700 text-xs whitespace-nowrap'
+                        onClick={() => handleDownloadMatched(item)}
+                        className='bg-blue-600 text-white px-2 py-1 rounded-md hover:bg-blue-700 text-xs whitespace-nowrap cursor-pointer'
                       >
                         Download Matched
                       </button>
                       <button
-                        onClick={handleDownloadUnmatched}
-                        className='bg-slate-500 text-white px-2 py-1 rounded-md hover:bg-slate-600 text-xs whitespace-nowrap'
+                        onClick={() => handleDownloadUnmatched(item)}
+                        className='bg-slate-500 text-white px-2 py-1 rounded-md hover:bg-slate-600 text-xs whitespace-nowrap cursor-pointer'
                       >
                         Download Unmatched
                       </button>
@@ -430,8 +442,8 @@ const History = () => {
                         filteredAndSortedData.reduce((sum, item) => {
                           const totalRecords =
                             (item.auto_matched || 0) +
-                              (item.manual_matched || 0) + 
-                              (item.unmatched || 0);
+                            (item.manual_matched || 0) +
+                            (item.unmatched || 0);
                           const matched =
                             (item.auto_matched || 0) +
                             (item.manual_matched || 0);

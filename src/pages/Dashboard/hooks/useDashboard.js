@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import axiosInstance from '../../../axios/axiosInstance'
+import axios from 'axios';
+import axiosInstance from '../../../axios/axiosInstance';
 
 const useDashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
@@ -9,11 +10,13 @@ const useDashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const response = await axiosInstance.dashboardapi.get('/dashboardApi/all');
+        const response = await axiosInstance.dashboardapi.get('/upload');
         setDashboardData(response.data);
       } catch (err) {
         setError(
-          err?.response?.data?.message || err.message || 'Unknown error'
+          err?.response?.data?.message ||
+            err.message ||
+            'Failed to fetch dashboard data'
         );
       } finally {
         setLoading(false);

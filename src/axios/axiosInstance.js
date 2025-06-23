@@ -12,7 +12,7 @@ const createAxiosInstance = (baseURL) => {
 };
 
 const axiosInstance = {
-  dashboardapi: createAxiosInstance(import.meta.env.VITE_DASHBOARD_API_URL),
+  dashboardapi: createAxiosInstance(import.meta.env.VITE_API_URL),
 };
 
 export default axiosInstance;
