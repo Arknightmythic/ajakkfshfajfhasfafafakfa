@@ -20,7 +20,6 @@ const Header = () => {
     }
     
   }, [location])
-  console.log(title)
     return (
         <header className="flex flex-row bg-[#F9FAFB] justify-between items-center ">
             <div>

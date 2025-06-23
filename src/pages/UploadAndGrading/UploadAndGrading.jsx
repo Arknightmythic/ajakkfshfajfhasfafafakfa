@@ -2,6 +2,7 @@ import { Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { FileText, FileX2 } from "lucide-react";
 import { Trash } from 'lucide-react';
+import useUploadFile from "./hooks/useUploadFile";
 
 const UploadAndGrading = () => {
   const [institution, setInstitution] = useState("");
@@ -10,6 +11,8 @@ const UploadAndGrading = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [responseOK, setResponseOK] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const { uploadFile, isUploading } = useUploadFile();
+
 
   const data = [
   {
@@ -18,6 +21,7 @@ const UploadAndGrading = () => {
     total: 1000,
     grade: 'Grade A',
     status: 'Grading Complete',
+    is_sync: '1',
   },
   {
     institution: 'Ministry of Education',
@@ -25,6 +29,7 @@ const UploadAndGrading = () => {
     total: 750,
     grade: 'Grade B',
     status: 'Grading Complete',
+    is_sync: '0',
   },
   {
     institution: 'Ministry of Health',
@@ -32,6 +37,7 @@ const UploadAndGrading = () => {
     total: 500,
     grade: 'Grade C',
     status: 'Grading Complete',
+    is_sync: '0',    
   },
   {
     institution: 'Ministry of Transport',
@@ -39,6 +45,7 @@ const UploadAndGrading = () => {
     total: 300,
     grade: 'Grade D',
     status: 'Grading Complete',
+    is_sync: '0',
   },
   {
     institution: 'Ministry of Transport',
@@ -46,6 +53,7 @@ const UploadAndGrading = () => {
     total: 300,
     grade: 'Grade E',
     status: 'Grading Complete',
+    is_sync: '0',
   },
   ];
 
@@ -68,10 +76,25 @@ const UploadAndGrading = () => {
     }
   };
 
-  const handleUpload = () => {
+  // const handleUpload = () => {
+  //   setIsProcessing(true);
+  //   setResponseOK(false);
+  //   setLastUploadedFile(selectedFile);
+
+  //   setInstitution("");
+  //   setSelectedFile(null);
+  // };
+
+  const handleUpload = async () => {
     setIsProcessing(true);
     setResponseOK(false);
     setLastUploadedFile(selectedFile);
+
+    const success = await uploadFile(selectedFile, institution);
+
+    if (success) {
+      setResponseOK(true);
+    }
 
     setInstitution("");
     setSelectedFile(null);
@@ -116,7 +139,18 @@ const UploadAndGrading = () => {
                     type="file"
                     accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     className="sr-only"
-                    onChange={(e) => setSelectedFile(e.target.files[0])}
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      const maxSize = 3.5 * 1024 * 1024 * 1024;
+
+                      if (file && file.size > maxSize) {
+                        alert("**The file is too large. The maximum allowed size is 3.5GB.*");
+                        e.target.value = null;
+                        return;
+                      }
+
+                      setSelectedFile(file);
+                    }}
                 />
               </label>
               <p className="pl-1">or drag and drop</p>
@@ -220,7 +254,15 @@ const UploadAndGrading = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <button className="font-medium text-blue-600 hover:underline cursor-pointer">Start Synchronization</button>
+                    <button
+                      disabled={item.is_sync === "1"}
+                      // onClick={() => handleSync(item.id)}
+                      className={`font-medium text-blue-600 hover:underline ${
+                        item.is_sync === "1" ? "cursor-not-allowed text-slate-400 hover:no-underline" : "cursor-pointer"
+                      }`}
+                    >
+                      Start Synchronization
+                    </button>
                   </td>
                 </tr>
               ))}

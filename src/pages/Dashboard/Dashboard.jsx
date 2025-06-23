@@ -201,7 +201,6 @@ const Dashboard = () => {
       }
     }
 
-    // Cleanup function
     return () => {
       if (gradeChartInstance.current) {
         gradeChartInstance.current.destroy();
