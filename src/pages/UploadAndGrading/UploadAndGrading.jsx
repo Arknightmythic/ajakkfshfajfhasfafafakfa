@@ -2,6 +2,7 @@ import { Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { FileText, FileX2 } from "lucide-react";
 import { Trash } from 'lucide-react';
+import useUploadFile from "./hooks/useUploadFile";
 
 const UploadAndGrading = () => {
   const [institution, setInstitution] = useState("");
@@ -10,6 +11,8 @@ const UploadAndGrading = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [responseOK, setResponseOK] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const { uploadFile, isUploading } = useUploadFile();
+
 
   const data = [
   {
@@ -73,10 +76,25 @@ const UploadAndGrading = () => {
     }
   };
 
-  const handleUpload = () => {
+  // const handleUpload = () => {
+  //   setIsProcessing(true);
+  //   setResponseOK(false);
+  //   setLastUploadedFile(selectedFile);
+
+  //   setInstitution("");
+  //   setSelectedFile(null);
+  // };
+
+  const handleUpload = async () => {
     setIsProcessing(true);
     setResponseOK(false);
     setLastUploadedFile(selectedFile);
+
+    const success = await uploadFile(selectedFile, institution);
+
+    if (success) {
+      setResponseOK(true);
+    }
 
     setInstitution("");
     setSelectedFile(null);
@@ -121,7 +139,18 @@ const UploadAndGrading = () => {
                     type="file"
                     accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     className="sr-only"
-                    onChange={(e) => setSelectedFile(e.target.files[0])}
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      const maxSize = 3.5 * 1024 * 1024 * 1024;
+
+                      if (file && file.size > maxSize) {
+                        alert("**The file is too large. The maximum allowed size is 3.5GB.*");
+                        e.target.value = null;
+                        return;
+                      }
+
+                      setSelectedFile(file);
+                    }}
                 />
               </label>
               <p className="pl-1">or drag and drop</p>

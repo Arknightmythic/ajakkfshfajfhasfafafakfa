@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Layers } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import { FileCog } from 'lucide-react';
@@ -119,7 +119,6 @@ const Dashboard = () => {
       setChartInitialized(true);
     }
 
-    // Cleanup function
     return () => {
       if (errorTypeChart) errorTypeChart.destroy();
       if (gradeChart) gradeChart.destroy();
@@ -134,16 +133,12 @@ const Dashboard = () => {
     setActivePage({ type: 'matched', institution, grade });
   };
 
-  const handleBack = () => {
-    setActivePage(null);
-  };
-
   return (
     <div
       className='p-6'
       style={{
         filter: `blur(5px)`,
-        transition: 'filter 0.3s ease', // Smooth transition for blur effect
+        transition: 'filter 0.3s ease', 
       }}
     >
         <>
@@ -226,7 +221,7 @@ const Dashboard = () => {
                     {mockData.recentBatches.map((batch, index) => (
                       <tr
                         key={index}
-                        className='bg-white border-b hover:bg-slate-50'
+                        className='bg-white border-b border-slate-200 hover:bg-slate-50'
                       >
                         <td className='px-6 py-4 font-medium'>
                           {batch.institution}
