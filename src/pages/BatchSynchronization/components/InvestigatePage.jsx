@@ -3,18 +3,24 @@ import TableHeader from "./TableHeader";
 import { useLocation, useNavigate } from "react-router-dom";
 import { CircleCheck } from 'lucide-react';
 import { useEffect, useState } from "react";
+import DangerPopOut from "../../../components/PopOut/DangerPopOut";
+import { SuccessPopOut } from "../../../components/PopOut/SuccessPopOut";
+
 
 const InvestigatePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { institutionName, statusGrade, data = [] } = location.state || {};
+  const {metadata_id, institutionName, statusGrade, data = [] } = location.state || {};
   const [selectedIndexes, setSelectedIndexes] = useState([]);
   const [selectedMatches, setSelectedMatches] = useState([]);
   const [selectedMatchIndex, setSelectedMatchIndex] = useState(null);
   const selectedSource = selectedIndexes.length === 1 ? data[selectedIndexes[0]] : null;
   const similarityData = selectedSource?.similiarity_data || [];
   const isMatchButtonDisabled = selectedIndexes.length !== 1 || selectedMatchIndex === null;
+
+  // const { mutate: completeInvestigation, isLoading } = useCompleteInvestigation();
+
 
 
   const shouldShowMatchReason =
@@ -134,9 +140,27 @@ const InvestigatePage = () => {
           Back to Batch List
         </button>
 
-        <button className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 text-sm flex items-center cursor-pointer">
-            <CircleCheck className="w-4 h-4 mr-2"/>
-            Mark as Completed
+        <button 
+          className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 text-sm flex items-center cursor-pointer"
+          onClick={() => 
+            DangerPopOut(
+              "Mark as Completed?",
+              `All source data that has not been marked as <b>Match</b> or <b>Unmatch</b> will automatically be marked as <b>Unmatch</b>. Are you sure you want to proceed?`, 
+              "Yes, mark as completed",
+              // () => {
+              //   console.log(metadata_id);
+              //   // completeInvestigation(metadata_id);
+              // }
+              async () => {
+                // const success = await completeInvestigation(metadata_id);
+                // if (success) {
+                  SuccessPopOut("Success", "Investigation marked as completed successfully.")
+                    .then(() => navigate("/batch-synchronization"));
+                // }
+              }
+            )}>
+              <CircleCheck className="w-4 h-4 mr-2"/>
+              Mark as Completed
         </button>
       </div>
 
