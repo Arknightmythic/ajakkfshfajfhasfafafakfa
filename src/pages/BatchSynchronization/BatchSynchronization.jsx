@@ -18,30 +18,35 @@ const BatchSynchronization = () => {
   const navigate = useNavigate();
   const data = [
     {
+      metadata_id: "1",
       name: "Ministry of Social Affairs",
       total: "150,000",
       grade: "E",
       status: "Awaiting Action",
     },
     {
+      metadata_id: "2",
       name: "Ministry of Health",
       total: "2,500,000",
       grade: "E",
       status: "In Progress",
     },
     {
+      metadata_id: "3",
       name: "Ministry of Finance",
       total: "25,000",
       grade: "B",
       status: "Awaiting Action",
     },
     {
+      metadata_id: "4",
       name: "Ministry of Education",
       total: "12,000",
       grade: "C",
       status: "Awaiting Action",
     },
     {
+      metadata_id: "4",
       name: "State Civil Service Agency",
       total: "75,000",
       grade: "A",
@@ -72,9 +77,10 @@ const BatchSynchronization = () => {
     return matchSearch && matchGrade && matchStatus;
   });
 
-  const showInvestigationPage = (name, grade) => {
+  const showInvestigationPage = (id, name, grade) => {
     navigate('/batch-synchronization/investigate', {
       state: {
+        metadata_id: id,
         institutionName: name,
         statusGrade: grade,
         data: [
@@ -212,7 +218,7 @@ const BatchSynchronization = () => {
                           </button>
                       ) : (
                         <button
-                          onClick={() => showInvestigationPage(item.name, item.grade)}
+                          onClick={() => showInvestigationPage(item.metadata_id, item.name, item.grade)}
                           className="font-medium text-blue-600 hover:underline cursor-pointer"
                         >
                           Investigate
