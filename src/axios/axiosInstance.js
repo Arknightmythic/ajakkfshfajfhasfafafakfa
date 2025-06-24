@@ -12,7 +12,8 @@ const createAxiosInstance = (baseURL) => {
 };
 
 const axiosInstance = {
-  general: createAxiosInstance(import.meta.env.VITE_API_URL),
+  general: createAxiosInstance(import.meta.env.VITE_API_URL_GENERAL),
+  synchronize: createAxiosInstance(import.meta.env.VITE_API_URL_SYNCHRONIZE)
 };
 
 export default axiosInstance;

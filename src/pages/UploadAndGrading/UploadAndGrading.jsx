@@ -3,6 +3,9 @@ import { useEffect, useState } from "react";
 import { FileText, FileX2 } from "lucide-react";
 import { Trash } from 'lucide-react';
 import useUploadFile from "./hooks/useUploadFile";
+import useGetData from "./hooks/useGetData";
+import useSync from "./hooks/useSync";
+import { ErrorPopOut } from "../../components/PopOut/ErrorPopOut";
 
 const UploadAndGrading = () => {
   const [institution, setInstitution] = useState("");
@@ -13,77 +16,41 @@ const UploadAndGrading = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const { uploadFile, isUploading } = useUploadFile();
 
+  const { data, refetch } = useGetData();
 
-  const data = [
-  {
-    institution: 'Ministry of Social Affairs',
-    file: 'data.csv',
-    total: 1000,
-    grade: 'Grade A',
-    status: 'Grading Complete',
-    is_sync: '1',
-  },
-  {
-    institution: 'Ministry of Education',
-    file: 'data_edu.csv',
-    total: 750,
-    grade: 'Grade B',
-    status: 'Grading Complete',
-    is_sync: '0',
-  },
-  {
-    institution: 'Ministry of Health',
-    file: 'health.xlsx',
-    total: 500,
-    grade: 'Grade C',
-    status: 'Grading Complete',
-    is_sync: '0',    
-  },
-  {
-    institution: 'Ministry of Transport',
-    file: 'transport.csv',
-    total: 300,
-    grade: 'Grade D',
-    status: 'Grading Complete',
-    is_sync: '0',
-  },
-  {
-    institution: 'Ministry of Transport',
-    file: 'transport-car.csv',
-    total: 300,
-    grade: 'Grade E',
-    status: 'Grading Complete',
-    is_sync: '0',
-  },
-  ];
+  const [filteredData, setFilteredData] = useState([]);
+  useEffect(() => {
+    if (!data || data.length === 0) {
+      setFilteredData([]);
+      return;
+    }
 
-  const [filteredData, setFilteredData] = useState(data);
+    const search = searchTerm.toLowerCase();
+    const result = data.filter(item =>
+      item.institution_name?.toLowerCase().includes(search) ||
+      item.file_name?.toLowerCase().includes(search) ||
+      item.grade?.toLowerCase().includes(search)
+    );
+    setFilteredData(result);
+  }, [searchTerm, data]);
+
 
   const getGradeClass = (grade) => {
     switch (grade) {
-      case 'Grade A':
+      case 'A':
         return 'bg-green-200 text-green-800';
-      case 'Grade B':
+      case 'B':
         return 'bg-yellow-200 text-yellow-800';
-      case 'Grade C':
+      case 'C':
         return 'bg-orange-200 text-orange-800';
-      case 'Grade D':
+      case 'D':
         return 'bg-purple-200 text-purple-800';
-      case 'Grade E':
+      case 'E':
         return 'bg-red-200 text-red-800';
       default:
         return 'bg-gray-200 text-gray-800';
     }
   };
-
-  // const handleUpload = () => {
-  //   setIsProcessing(true);
-  //   setResponseOK(false);
-  //   setLastUploadedFile(selectedFile);
-
-  //   setInstitution("");
-  //   setSelectedFile(null);
-  // };
 
   const handleUpload = async () => {
     setIsProcessing(true);
@@ -94,6 +61,9 @@ const UploadAndGrading = () => {
 
     if (success) {
       setResponseOK(true);
+      refetch()
+    } else {
+      ErrorPopOut()
     }
 
     setInstitution("");
@@ -104,15 +74,19 @@ const UploadAndGrading = () => {
     setSelectedFile(null);
   };
 
-  useEffect(() => {
-    const search = searchTerm.toLowerCase();
-    const result = data.filter(item =>
-      item.institution.toLowerCase().includes(search) ||
-      item.file.toLowerCase().includes(search) ||
-      item.grade.toLowerCase().includes(search)
-    );
-    setFilteredData(result);
-  }, [searchTerm]);
+  const { syncByGrade, loading, error } = useSync();
+
+  const handleSync = async (id, grade) => {
+    const result = await syncByGrade(id, "F");
+    if (result) {
+      console.log('Success:', result);
+      refetch()
+    } else {
+      console.error('Failed:', error);
+      ErrorPopOut()
+    }
+  };
+
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -238,34 +212,50 @@ const UploadAndGrading = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredData.map((item, index) => (
+              {filteredData.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="text-center text-gray-500 py-6">
+                    No data found
+                  </td>
+                </tr>
+              ): (
+                [...filteredData]
+                .sort((a, b) => new Date(b.inserted_date) - new Date(a.inserted_date))
+                .map((item, index) => (
                 <tr key={index} className="bg-white border-b border-slate-200 hover:bg-gray-50">
-                  <td className="px-6 py-4">{item.institution}</td>
-                  <td className="px-6 py-4">{item.file}</td>
-                  <td className="px-6 py-4">{item.total}</td>
+                  <td className="px-6 py-4">{item.institution_name}</td>
+                  <td className="px-6 py-4">{item.file_name}</td>
+                  <td className="px-6 py-4">{item.total_records}</td>
                   <td className="px-6 py-4">
                     <span className={`font-bold text-xs px-2 py-1 rounded ${getGradeClass(item.grade)}`}>
-                      {item.grade}
+                      Grade {item.grade}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                      {item.status}
+                    <span
+                      className={
+                        item.status_grading.toLowerCase() === "completed"
+                          ? "bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full"
+                          : "text-gray-700 text-xs font-medium px-2.5 py-0.5 rounded-full"
+                      }
+                    >
+                      {item.status_grading.toLowerCase() === "completed" ? "Grading Complete" : item.status_grading}
                     </span>
+
                   </td>
                   <td className="px-6 py-4 text-center">
                     <button
-                      disabled={item.is_sync === "1"}
-                      // onClick={() => handleSync(item.id)}
-                      className={`font-medium text-blue-600 hover:underline ${
-                        item.is_sync === "1" ? "cursor-not-allowed text-slate-400 hover:no-underline" : "cursor-pointer"
+                      disabled={item.status_proses === "completed"}
+                      onClick={() => handleSync(item.id, item.grade)}
+                      className={`font-medium text-blue-600 ${
+                        item.status_proses === "completed" ? "cursor-not-allowed text-slate-400 hover:no-underline" : "hover:underline cursor-pointer"
                       }`}
                     >
                       Start Synchronization
                     </button>
                   </td>
                 </tr>
-              ))}
+              )))}
           </tbody>
           </table>
         </div>
