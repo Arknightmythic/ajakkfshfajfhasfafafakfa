@@ -21,8 +21,7 @@ const useUploadFile = () => {
       });
 
       if (response.status === 200) {
-        console.log(response)
-        return true; 
+        return true;
       } else {
         throw new Error(`Unexpected response status: ${response.status}`);
       }

@@ -1,129 +1,213 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Layers } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import { FileCog } from 'lucide-react';
 import { CheckCheck } from 'lucide-react';
 import Chart from 'chart.js/auto';
+import useDashboard from './hooks/useDashboard';
 
 const Dashboard = () => {
   const [activePage, setActivePage] = useState(null);
-  const errorTypeLineChartRef = useRef(null);
   const gradeBarChartRef = useRef(null);
-  const [chartInitialized, setChartInitialized] = useState(false);
+  const gradeChartInstance = useRef(null);
+  const { dashboardData, loading, error } = useDashboard();
 
-  const mockData = {
-    totalBatches: 124,
-    awaitingAction: 15,
-    inProgress: 8,
-    completed: 101,
-    errorTypeTrends: {
-      labels: ['Jun 4', 'Jun 5', 'Jun 6', 'Jun 7', 'Jun 8', 'Jun 9', 'Jun 10'],
-      datasets: [
-        {
-          label: 'Name Typo',
-          data: [1400, 1450, 1800, 1600, 1550, 1650, 1600],
-          borderColor: '#ef4444',
-          backgroundColor: 'rgba(239, 68, 68, 0.2)',
-          tension: 0.4,
-          fill: true,
-        },
-        {
-          label: 'Invalid Date Format',
-          data: [1000, 1050, 1100, 1200, 1150, 1250, 1300],
-          borderColor: '#f59e0b',
-          backgroundColor: 'rgba(245, 158, 11, 0.2)',
-          tension: 0.4,
-          fill: true,
-        },
-        {
-          label: 'NIK Not Found',
-          data: [2000, 2050, 2200, 2100, 2150, 2300, 2400],
-          borderColor: '#8b5cf6',
-          backgroundColor: 'rgba(139, 92, 246, 0.2)',
-          tension: 0.4,
-          fill: true,
-        },
+  const computedData = useMemo(() => {
+    if (!dashboardData) {
+      return null;
+    }
+    const raw = dashboardData?.data || [];
+    const gradeCounts = {
+      'Grade A': 0,
+      'Grade B': 0,
+      'Grade C': 0,
+      'Grade D': 0,
+      'Grade E': 0,
+      'Grade ERROR': 0,
+    };
+
+    const totalBatches = raw.length;
+    const completed = raw.filter(
+      (r) => String(r.status_grading).toLowerCase() === 'completed'
+    ).length;
+
+    const failed = raw.filter(
+      (r) => String(r.status_grading).toLowerCase() === 'failed'
+    ).length;
+
+    const inProgress = raw.filter(
+      (r) =>
+        r.status_grading?.toLowerCase() === 'in_progress' ||
+        r.status_grading?.toLowerCase() === 'processing'
+    ).length;
+
+    raw.forEach((item) => {
+      const grade = item.grade?.toUpperCase();
+      if (grade === 'ERROR') {
+        gradeCounts['Grade ERROR'] += 1;
+      } else if (['A', 'B', 'C', 'D', 'E'].includes(grade)) {
+        gradeCounts[`Grade ${grade}`] += 1;
+      }
+    });
+
+    const gradeDistribution = {
+      labels: [
+        'Grade A',
+        'Grade B',
+        'Grade C',
+        'Grade D',
+        'Grade E',
+        'Grade ERROR',
       ],
-    },
-    gradeDistribution: {
-      labels: ['Grade A', 'Grade B', 'Grade C', 'Grade D', 'Grade E'],
       datasets: [
         {
           label: 'Data Count',
-          data: [1500000, 1000000, 700000, 500000, 300000],
+          data: [
+            gradeCounts['Grade A'],
+            gradeCounts['Grade B'],
+            gradeCounts['Grade C'],
+            gradeCounts['Grade D'],
+            gradeCounts['Grade E'],
+            gradeCounts['Grade ERROR'],
+          ],
           backgroundColor: [
-            '#10b981',
-            '#f59e0b',
-            '#f97316',
-            '#ef4444',
-            '#8b5cf6',
+            '#10b981', // Green
+            '#f59e0b', // Yellow
+            '#f97316', // Orange
+            '#ef4444', // Red
+            '#8b5cf6', // Purple
+            '#6b7280', // Gray for ERROR
           ],
         },
       ],
-    },
-    recentBatches: [
-      {
-        institution: 'Ministry of Social Affairs',
-        status: 'Awaiting Action',
-        grade: 'E',
-      },
-      { institution: 'Ministry of Health', status: 'In Progress', grade: 'E' },
-      {
-        institution: 'State Civil Service Agency',
-        status: 'Completed',
-        grade: 'A',
-      },
-    ],
-  };
+    };
+
+    const formatStatus = (statusGrading, statusProses) => {
+      if (statusProses) {
+        const s = statusProses.toLowerCase();
+        if (s === 'completed') return 'Completed';
+        if (s === 'failed') return 'Failed';
+        if (s === 'in_progress' || s === 'processing') return 'In Progress';
+      }
+      return statusProses || '';
+    };
+
+    const today = new Date().toISOString().split('T')[0]; 
+    const recentBatches = raw
+      .filter((item) => item.inserted_date?.startsWith(today))
+      .sort(
+        (a, b) =>
+          new Date(b.inserted_date).getTime() -
+          new Date(a.inserted_date).getTime()
+      );
+
+    return {
+      totalBatches,
+      completed,
+      failed,
+      inProgress,
+      awaitingAction: 0, 
+      gradeDistribution,
+      recentBatches: recentBatches.map((item) => ({
+        id: item.id,
+        institution: item.institution_name,
+        fileName: item.file_name,
+        status: formatStatus(item.status_grading, item.status_proses),
+        grade: item.grade,
+        totalRecords: item.total_records,
+        insertedDate: item.inserted_date,
+      })),
+      totalRecords: raw.reduce(
+        (sum, item) => sum + (item.total_records || 0),
+        0
+      ),
+      successRate:
+        totalBatches > 0 ? ((completed / totalBatches) * 100).toFixed(1) : 0,
+    };
+  }, [dashboardData]);
+
+  const isGradeDataEmpty =
+    !computedData?.gradeDistribution ||
+    !computedData.gradeDistribution.datasets?.[0]?.data?.some((val) => val > 0);
 
   useEffect(() => {
-    let errorTypeChart, gradeChart;
+    if (gradeChartInstance.current) {
+      gradeChartInstance.current.destroy();
+      gradeChartInstance.current = null;
+    }
+    if (
+      !activePage &&
+      computedData?.gradeDistribution &&
+      gradeBarChartRef.current &&
+      !loading
+    ) {
+      const canvas = gradeBarChartRef.current;
+      const ctx = canvas.getContext('2d');
 
-    if (!chartInitialized && !activePage) {
-      const errorTypeCtx = errorTypeLineChartRef.current.getContext('2d');
-      const gradeCtx = gradeBarChartRef.current.getContext('2d');
-
-      errorTypeChart = new Chart(errorTypeCtx, {
-        type: 'line',
-        data: mockData.errorTypeTrends,
-        options: {
-          responsive: true,
-          scales: {
-            y: {
-              beginAtZero: true,
-              title: { display: true, text: 'Count' },
-              ticks: { stepSize: 400 },
+      try {
+        gradeChartInstance.current = new Chart(ctx, {
+          type: 'bar',
+          data: computedData.gradeDistribution,
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            scales: {
+              x: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: 'Data Count',
+                },
+                ticks: {
+                  callback: (value) => {
+                    if (value >= 1000000) {
+                      return `${(value / 1000000).toFixed(1)}M`;
+                    } else if (value >= 1000) {
+                      return `${(value / 1000).toFixed(0)}k`;
+                    }
+                    return value;
+                  },
+                },
+              },
+              y: {
+                ticks: {
+                  font: {
+                    size: 12,
+                  },
+                },
+              },
+            },
+            plugins: {
+              legend: {
+                display: false,
+              },
+              tooltip: {
+                callbacks: {
+                  label: function (context) {
+                    return `Count: ${context.raw.toLocaleString()}`;
+                  },
+                },
+              },
+            },
+            animation: {
+              duration: 1000,
+              easing: 'easeInOutQuart',
             },
           },
-          plugins: {
-            legend: { position: 'bottom' },
-          },
-        },
-      });
-
-      gradeChart = new Chart(gradeCtx, {
-        type: 'bar',
-        data: mockData.gradeDistribution,
-        options: {
-          responsive: true,
-          indexAxis: 'y',
-          scales: {
-            x: { beginAtZero: true, title: { display: true, text: 'Count' } },
-          },
-          plugins: {
-            legend: { position: 'bottom' },
-          },
-        },
-      });
-
-      setChartInitialized(true);
+        });
+      } catch (error) {
+        console.error('Error creating chart:', error);
+      }
     }
 
     return () => {
-      if (errorTypeChart) errorTypeChart.destroy();
-      if (gradeChart) gradeChart.destroy();
+      if (gradeChartInstance.current) {
+        gradeChartInstance.current.destroy();
+        gradeChartInstance.current = null;
+      }
     };
-  }, [activePage]);
+  }, [activePage, computedData, loading]);
 
   const handleInvestigate = (institution, grade) => {
     setActivePage({ type: 'investigation', institution, grade });
@@ -133,137 +217,180 @@ const Dashboard = () => {
     setActivePage({ type: 'matched', institution, grade });
   };
 
+  const handleBack = () => {
+    setActivePage(null);
+  };
+
+  if (loading) {
+    return (
+      <div className='p-6 flex items-center justify-center min-h-[400px]'>
+        <div className='text-center'>
+          <Loader2 className='animate-spin w-8 h-8 mx-auto mb-4 text-blue-600' />
+          <p className='text-gray-600'>Loading dashboard data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className='p-6'>
+        <div className='bg-red-50 border border-red-200 rounded-lg p-4'>
+          <h3 className='text-red-800 font-medium'>Error Loading Dashboard</h3>
+          <p className='text-red-600 mt-1'>{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // No data state
+  if (!computedData) {
+    return (
+      <div className='p-6 flex items-center justify-center min-h-[400px]'>
+        <div className='text-center'>
+          <p className='text-gray-600'>No data available</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div
-      className='p-6'
-      style={{
-        filter: `blur(5px)`,
-        transition: 'filter 0.3s ease', 
-      }}
-    >
-        <>
-          <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8'>
-            <div className='bg-white p-6 rounded-xl shadow-sm flex items-center justify-between'>
-              <div>
-                <p className='text-sm font-medium text-slate-500'>
-                  Total Batches In
-                </p>
-                <p className='text-3xl font-bold'>{mockData.totalBatches}</p>
-              </div>
-              <div className='bg-blue-100 p-3 rounded-full'>
-                <Layers className='text-blue-600' />
-              </div>
-            </div>
-            <div className='bg-white p-6 rounded-xl shadow-sm flex items-center justify-between'>
-              <div>
-                <p className='text-sm font-medium text-slate-500'>
-                  Awaiting Action
-                </p>
-                <p className='text-3xl font-bold'>{mockData.awaitingAction}</p>
-              </div>
-              <div className='bg-yellow-100 p-3 rounded-full'>
-                <Loader2 className='text-yellow-600 w-6 h-6 animate-spin' />
-              </div>
-            </div>
-            <div className='bg-white p-6 rounded-xl shadow-sm flex items-center justify-between'>
-              <div>
-                <p className='text-sm font-medium text-slate-500'>
-                  In Progress
-                </p>
-                <p className='text-3xl font-bold'>{mockData.inProgress}</p>
-              </div>
-              <div className='bg-orange-100 p-3 rounded-full'>
-                <FileCog className='text-orange-600 w-6 h-6' />
-              </div>
-            </div>
-            <div className='bg-white p-6 rounded-xl shadow-sm flex items-center justify-between'>
-              <div>
-                <p className='text-sm font-medium text-slate-500'>Completed</p>
-                <p className='text-3xl font-bold'>{mockData.completed}</p>
-              </div>
-              <div className='bg-green-100 p-3 rounded-full'>
-                <CheckCheck className='text-green-600 w-6 h-6' />
-              </div>
-            </div>
+    <div className='p-6'>
+      {/* Stats Cards */}
+      <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8'>
+        <div className='bg-white p-6 rounded-xl shadow-sm flex items-center justify-between'>
+          <div>
+            <p className='text-sm font-medium text-slate-500'>
+              Total Batches In
+            </p>
+            <p className='text-3xl font-bold'>{computedData.totalBatches}</p>
           </div>
-          <div className='grid grid-cols-1 xl:grid-cols-3 gap-8'>
-            <div className='xl:col-span-2 bg-white p-6 rounded-xl shadow-sm'>
-              <h3 className='font-semibold text-lg mb-4'>
-                Error Type Trends (Last 7 Days)
-              </h3>
-              <canvas
-                id='errorTypeLineChart'
-                ref={errorTypeLineChartRef}
-              ></canvas>
-            </div>
-            <div className='xl:col-span-1 bg-white p-6 rounded-xl shadow-sm'>
-              <h3 className='font-semibold text-lg mb-4'>
-                Data Count per Grade
-              </h3>
-              <canvas
-                id='gradeBarChart'
-                ref={gradeBarChartRef}
-                style={{ height: '400px', width: '100%' }}
-              ></canvas>
-            </div>
-            <div className='xl:col-span-3 bg-white p-6 rounded-xl shadow-sm'>
-              <h3 className='font-semibold text-lg mb-4'>Recent Batches</h3>
-              <div className='overflow-x-auto'>
-                <table className='w-full text-sm text-left'>
-                  <thead className='text-xs text-slate-500 uppercase bg-slate-50'>
-                    <tr>
-                      <th className='px-6 py-3'>Ministry/Institution</th>
-                      <th className='px-6 py-3'>Status</th>
-                      <th className='px-6 py-3 text-center'>Action</th>
+          <div className='bg-blue-100 p-3 rounded-full'>
+            <Layers className='text-blue-600' />
+          </div>
+        </div>
+        <div className='bg-white p-6 rounded-xl shadow-sm flex items-center justify-between'>
+          <div>
+            <p className='text-sm font-medium text-slate-500'>
+              Awaiting Action
+            </p>
+            <p className='text-3xl font-bold'>{computedData.awaitingAction}</p>
+          </div>
+          <div className='bg-yellow-100 p-3 rounded-full'>
+            <Loader2 className='text-yellow-600 w-6 h-6' />
+          </div>
+        </div>
+        <div className='bg-white p-6 rounded-xl shadow-sm flex items-center justify-between'>
+          <div>
+            <p className='text-sm font-medium text-slate-500'>In Progress</p>
+            <p className='text-3xl font-bold'>{computedData.inProgress}</p>
+          </div>
+          <div className='bg-orange-100 p-3 rounded-full'>
+            <FileCog className='text-orange-600 w-6 h-6' />
+          </div>
+        </div>
+        <div className='bg-white p-6 rounded-xl shadow-sm flex items-center justify-between'>
+          <div>
+            <p className='text-sm font-medium text-slate-500'>Completed</p>
+            <p className='text-3xl font-bold'>{computedData.completed}</p>
+          </div>
+          <div className='bg-green-100 p-3 rounded-full'>
+            <CheckCheck className='text-green-600 w-6 h-6' />
+          </div>
+        </div>
+      </div>
+
+      {/* Charts and Table */}
+      <div className='grid grid-cols-1 xl:grid-cols-2 gap-8'>
+        {/* Chart Section */}
+        <div className='xl:col-span-1 bg-white p-6 rounded-xl shadow-sm'>
+          <h3 className='font-semibold text-lg mb-4'>Data Count per Grade</h3>
+          <div className='relative h-[300px] w-full'>
+            {isGradeDataEmpty ? (
+              <div className='absolute inset-0 flex items-center justify-center text-gray-400'>
+                No data available.
+              </div>
+            ) : (
+              <canvas ref={gradeBarChartRef} className='w-full h-full' />
+            )}
+          </div>
+        </div>
+
+        {/* Recent Batches Table */}
+        <div className='xl:col-span-1 bg-white p-6 rounded-xl shadow-sm'>
+          <h3 className='font-semibold text-lg mb-4'>Recent Batches</h3>
+          <div className='overflow-x-auto'>
+            <table className='w-full text-sm text-left'>
+              <thead className='text-xs text-slate-500 uppercase bg-slate-50'>
+                <tr>
+                  <th className='px-6 py-3'>Ministry/Institution</th>
+                  <th className='px-6 py-3'>Status</th>
+                  <th className='px-6 py-3 text-center'>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {computedData &&
+                computedData.recentBatches &&
+                computedData.recentBatches.length > 0 ? (
+                  computedData.recentBatches.map((batch, index) => (
+                    <tr
+                      key={index}
+                      className='bg-white border-b border-slate-200 hover:bg-slate-50'
+                    >
+                      <td className='px-6 py-4 font-medium'>
+                        {batch.institution}
+                      </td>
+                      <td className='px-6 py-4 whitespace-nowrap'>
+                      {batch.status ? (
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            batch.status === 'Awaiting Action'
+                              ? 'bg-red-100 text-red-800'
+                              : batch.status === 'In Progress'
+                              ? 'bg-orange-100 text-orange-800'
+                              : 'bg-green-100 text-green-800'
+                          }`}
+                        >
+                          {batch.status}
+                        </span>
+                      ) : (
+                        <span className='text-slate-500'></span>
+                      )}
+                      </td>
+                      <td className='px-6 py-4 text-center'>
+                        <button
+                          onClick={() =>
+                            batch.status === 'Completed'
+                              ? handleView(batch.institution, batch.grade)
+                              : handleInvestigate(
+                                  batch.institution,
+                                  batch.grade
+                                )
+                          }
+                          className='font-medium text-blue-600 hover:underline'
+                        >
+                          {batch.status === 'Completed'
+                            ? 'View'
+                            : 'Investigate'}
+                        </button>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {mockData.recentBatches.map((batch, index) => (
-                      <tr
-                        key={index}
-                        className='bg-white border-b border-slate-200 hover:bg-slate-50'
-                      >
-                        <td className='px-6 py-4 font-medium'>
-                          {batch.institution}
-                        </td>
-                        <td className='px-6 py-4'>
-                          <span
-                            className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              batch.status === 'Awaiting Action'
-                                ? 'bg-red-100 text-red-800'
-                                : batch.status === 'In Progress'
-                                ? 'bg-orange-100 text-orange-800'
-                                : 'bg-green-100 text-green-800'
-                            }`}
-                          >
-                            {batch.status}
-                          </span>
-                        </td>
-                        <td className='px-6 py-4 text-center'>
-                          <button
-                            onClick={() =>
-                              batch.status === 'Completed'
-                                ? handleView(batch.institution, batch.grade)
-                                : handleInvestigate(
-                                    batch.institution,
-                                    batch.grade
-                                  )
-                            }
-                            className='font-medium text-blue-600 hover:underline'
-                          >
-                            {batch.status === 'Completed'
-                              ? 'View'
-                              : 'Investigate'}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      colSpan={3}
+                      className='text-sm text-center text-slate-500 py-6'
+                    >
+                      No data available.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
-        </>
+        </div>
+      </div>
     </div>
   );
 };
