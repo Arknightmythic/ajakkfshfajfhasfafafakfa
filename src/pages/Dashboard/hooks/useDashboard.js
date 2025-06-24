@@ -10,7 +10,7 @@ const useDashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const response = await axiosInstance.general.get('/upload');
+        const response = await axiosInstance.general.get('/sync');
         setDashboardData(response.data);
       } catch (err) {
         setError(

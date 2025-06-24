@@ -9,8 +9,8 @@ const useHistory = () => {
   useEffect(() => {
     const fetchHistoryData = async () => {
       try {
-        const response = await axiosInstance.dashboardapi.get(
-          '/historyApi/all'
+        const response = await axiosInstance.general.get(
+          '/history'
         );
         setHistoryData(response.data);
       } catch (err) {
