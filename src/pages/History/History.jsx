@@ -23,14 +23,14 @@ const History = () => {
     endDate: null,
   });
 
+  const { downloadFile, loadingDownload } = useDownload();
+
   const handleDownloadMatched = (item) => {
-    alert('Downloading Matched data for item:' + item.metadata_id);
-    useDownload('match', item.metadata_id, 'csv');
+    downloadFile('match', item.metadata_id, 'csv');
   };
 
   const handleDownloadUnmatched = (item) => {
-    alert('Downloading Unmatched data for item:' + item.metadata_id);
-    useDownload('unmatch', item.metadata_id, 'csv');
+    downloadFile('unmatch', item.metadata_id, 'csv');
   };
 
   const handleSort = (field) => {
@@ -206,7 +206,10 @@ const History = () => {
   }
 
   return (
-    <div id='historyPage' className='relative'>
+    <div
+      id='historyPage'
+      className={`relative ${loadingDownload ? 'cursor-progress' : ''}`}
+    >
       <div className='bg-white p-6 rounded-xl shadow-sm absolute top-0 left-0 '>
         <div className='mb-6 space-y-4'>
           <div className='flex flex-wrap gap-4 items-center justify-between'>
@@ -317,7 +320,11 @@ const History = () => {
                     className='bg-white border-b border-slate-300 hover:bg-slate-50'
                   >
                     <td className='px-6 py-4'>
-                      {highlightSearchTerm(item.institution_name, searchTerm, false)}
+                      {highlightSearchTerm(
+                        item.institution_name,
+                        searchTerm,
+                        false
+                      )}
                     </td>
                     <td className='px-6 py-4'>
                       {item.last_update.split('T')[0]}
@@ -337,13 +344,17 @@ const History = () => {
                     <td className='flex px-6 py-4 text-center space-x-2'>
                       <button
                         onClick={() => handleDownloadMatched(item)}
-                        className='bg-blue-600 text-white px-2 py-1 rounded-md hover:bg-blue-700 text-xs whitespace-nowrap cursor-pointer'
+                        className={`bg-blue-600 text-white px-2 py-1 rounded-md hover:bg-blue-700 text-xs whitespace-nowrap cursor-pointer ${
+                          loadingDownload ? 'cursor-progress' : ''
+                        }`}
                       >
                         Download Matched
                       </button>
                       <button
                         onClick={() => handleDownloadUnmatched(item)}
-                        className='bg-slate-500 text-white px-2 py-1 rounded-md hover:bg-slate-600 text-xs whitespace-nowrap cursor-pointer'
+                        className={`bg-slate-500 text-white px-2 py-1 rounded-md hover:bg-slate-600 text-xs whitespace-nowrap cursor-pointer ${
+                          loadingDownload ? 'cursor-progress' : ''
+                        }`}
                       >
                         Download Unmatched
                       </button>
