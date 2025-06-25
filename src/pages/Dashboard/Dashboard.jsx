@@ -23,7 +23,6 @@ const Dashboard = () => {
       'Grade C': 0,
       'Grade D': 0,
       'Grade E': 0,
-      'Grade ERROR': 0,
     };
 
     const totalBatches = raw.length;
@@ -43,22 +42,13 @@ const Dashboard = () => {
 
     raw.forEach((item) => {
       const grade = item.grade?.toUpperCase();
-      if (grade === 'ERROR') {
-        gradeCounts['Grade ERROR'] += 1;
-      } else if (['A', 'B', 'C', 'D', 'E'].includes(grade)) {
+      if (['A', 'B', 'C', 'D', 'E'].includes(grade)) {
         gradeCounts[`Grade ${grade}`] += 1;
       }
     });
 
     const gradeDistribution = {
-      labels: [
-        'Grade A',
-        'Grade B',
-        'Grade C',
-        'Grade D',
-        'Grade E',
-        'Grade ERROR',
-      ],
+      labels: ['Grade A', 'Grade B', 'Grade C', 'Grade D', 'Grade E'],
       datasets: [
         {
           label: 'Data Count',
@@ -68,26 +58,24 @@ const Dashboard = () => {
             gradeCounts['Grade C'],
             gradeCounts['Grade D'],
             gradeCounts['Grade E'],
-            gradeCounts['Grade ERROR'],
           ],
           backgroundColor: [
-            '#10b981', // Green
-            '#f59e0b', // Yellow
-            '#f97316', // Orange
-            '#ef4444', // Red
-            '#8b5cf6', // Purple
-            '#6b7280', // Gray for ERROR
+            '#BBF7D0', // Darker Green
+            '#FDE047', // Darker Yellow
+            '#FDBA74', // Darker Orange
+            '#F87171', // Darker Red
+            '#FB7185', // Darker Pink/Purple
           ],
         },
       ],
     };
 
-    const formatStatus = (statusGrading, statusProses) => {
+    const formatStatus = (statusProses) => {
       if (statusProses) {
         const s = statusProses.toLowerCase();
         if (s === 'completed') return 'Completed';
-        if (s === 'failed') return 'Failed';
-        if (s === 'in_progress' || s === 'processing') return 'In Progress';
+        if (s === 'in progress') return 'In Progress';
+        if (s === 'awaiting action') return 'Awaiting Action';
       }
       return statusProses || '';
     };
@@ -112,7 +100,7 @@ const Dashboard = () => {
         id: item.id,
         institution: item.institution_name,
         fileName: item.file_name,
-        status: formatStatus(item.status_grading, item.status_proses),
+        status: formatStatus(item.status_proses),
         grade: item.grade,
         totalRecords: item.total_records,
         insertedDate: item.inserted_date,
@@ -225,8 +213,8 @@ const Dashboard = () => {
     return (
       <div className='p-6 flex items-center justify-center min-h-[400px]'>
         <div className='text-center'>
-          <Loader2 className='animate-spin w-8 h-8 mx-auto mb-4 text-blue-600' />
-          <p className='text-gray-600'>Loading dashboard data...</p>
+          <Loader2 className='animate-spin w-8 h-8 mx-auto mb-4 text-blue-600 mt-5' />
+          <p className='text-gray-600'>Loading...</p>
         </div>
       </div>
     );
@@ -236,8 +224,8 @@ const Dashboard = () => {
     return (
       <div className='p-6'>
         <div className='bg-red-50 border border-red-200 rounded-lg p-4'>
-          <h3 className='text-red-800 font-medium'>Error Loading Dashboard</h3>
-          <p className='text-red-600 mt-1'>{error}</p>
+          <h3 className='text-red-800 font-medium'>Error Loading Page</h3>
+          <p className='text-red-600 mt-1'>{error.message}</p>
         </div>
       </div>
     );
@@ -302,7 +290,6 @@ const Dashboard = () => {
 
       {/* Charts and Table */}
       <div className='grid grid-cols-1 xl:grid-cols-2 gap-8'>
-        {/* Chart Section */}
         <div className='xl:col-span-1 bg-white p-6 rounded-xl shadow-sm'>
           <h3 className='font-semibold text-lg mb-4'>Data Count per Grade</h3>
           <div className='relative h-[300px] w-full'>
@@ -332,30 +319,30 @@ const Dashboard = () => {
                 {computedData &&
                 computedData.recentBatches &&
                 computedData.recentBatches.length > 0 ? (
-                  computedData.recentBatches.map((batch, index) => (
+                  computedData.recentBatches.map((batch) => (
                     <tr
-                      key={index}
+                      key={batch.id}
                       className='bg-white border-b border-slate-200 hover:bg-slate-50'
                     >
                       <td className='px-6 py-4 font-medium'>
                         {batch.institution}
                       </td>
                       <td className='px-6 py-4 whitespace-nowrap'>
-                      {batch.status ? (
-                        <span
-                          className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            batch.status === 'Awaiting Action'
-                              ? 'bg-red-100 text-red-800'
-                              : batch.status === 'In Progress'
-                              ? 'bg-orange-100 text-orange-800'
-                              : 'bg-green-100 text-green-800'
-                          }`}
-                        >
-                          {batch.status}
-                        </span>
-                      ) : (
-                        <span className='text-slate-500'></span>
-                      )}
+                        {batch.status ? (
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-xs font-medium text-center ${
+                              batch.status === 'Awaiting Action'
+                                ? 'bg-red-100 text-red-800'
+                                : batch.status === 'In Progress'
+                                ? 'bg-orange-100 text-orange-800'
+                                : 'bg-green-100 text-green-800'
+                            }`}
+                          >
+                            {batch.status}
+                          </span>
+                        ) : (
+                          <span className='text-slate-500'></span>
+                        )}
                       </td>
                       <td className='px-6 py-4 text-center'>
                         <button
@@ -367,10 +354,16 @@ const Dashboard = () => {
                                   batch.grade
                                 )
                           }
-                          className='font-medium text-blue-600 hover:underline'
+                          className={`font-medium ${
+                            batch.status === 'Completed' ||
+                            batch.status === 'In Progress'
+                              ? ' text-blue-600'
+                              : 'text-blue-600'
+                          }hover:underline cursor-pointer `}
                         >
-                          {batch.status === 'Completed'
-                            ? 'View'
+                          {batch.status === 'Completed' ||
+                          batch.status === 'In Progress'
+                            ? 'Preview'
                             : 'Investigate'}
                         </button>
                       </td>

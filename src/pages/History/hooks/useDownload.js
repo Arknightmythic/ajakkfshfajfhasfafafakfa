@@ -1,59 +1,31 @@
 import { useState, useCallback } from 'react';
 import axiosInstance from '../../../axios/axiosInstance';
 
-const useDownload = () => {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+async function useDownload(matchType, metadataId, format = 'csv'){
 
-  const downloadData = useCallback((item, type) => {
-    setLoading(true);
-    setError(null);
+  try {
+    const response = await axiosInstance.general.post('/history', {
+        match_type: matchType,
+        metadata_id: metadataId,
+        format: format
+    }, {
+        responseType: 'blob'
+    });
 
-    let endpoint = '';
-    if (type === 'matched') {
-      endpoint = `/download/matched/${item.metadata_id || item.id}`;
-    } else if (type === 'unmatched') {
-      endpoint = `/download/unmatched/${item.metadata_id || item.id}`;
-    } else {
-      setError('Invalid download type');
-      setLoading(false);
-      return;
-    }
-
-    axiosInstance.backendApi
-      .get(endpoint)
-      .then((response) => {
-        const data = response.data;
-        const csv = convertToCSV(data);
-        downloadFile(csv, `${type}_data.csv`);
-      })
-      .catch((error) => {
-        setError(`Gagal mengunduh data ${type}: ${error.message}`);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, []); // Empty dependency array since endpoint logic is static
-
-  // Helper functions
-  const convertToCSV = (data) => {
-    if (!data.length) return '';
-    const headers = Object.keys(data[0]).join(',');
-    const rows = data.map((row) => Object.values(row).join(',')).join('\n');
-    return headers + '\n' + rows;
-  };
-
-  const downloadFile = (csv, filename) => {
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
+    const url = window.URL.createObjectURL(new Blob([response.data]));
     const a = document.createElement('a');
     a.href = url;
-    a.download = filename;
+    a.download = `${matchType}_data_${metadataId}.${format}`;
+    document.body.appendChild(a);
     a.click();
+    
     window.URL.revokeObjectURL(url);
-  };
-
-  return { downloadData, loading, error };
+    document.body.removeChild(a);
+    
+} catch (error) {
+    console.error('Download failed:', error);
+    alert('Download failed. Please try again.');
+}
 };
 
 export default useDownload;

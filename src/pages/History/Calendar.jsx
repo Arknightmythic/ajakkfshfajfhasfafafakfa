@@ -16,15 +16,13 @@ const RangeCalendarFilter = ({
   const [startDate, setStartDate] = useState(propStartDate);
   const [endDate, setEndDate] = useState(propEndDate);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [isPrevDisabled, setIsPrevDisabled] = useState(false);
+  const [isNextDisabled, setIsNextDisabled] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [selectingStart, setSelectingStart] = useState(true);
   const containerRef = useRef(null);
   const modalRef = useRef(null);
-  const dragRef = useRef(null);
 
-  // Drag state
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [modalPosition, setModalPosition] = useState({ x: 0, y: 0 });
 
   const months = [
@@ -88,8 +86,34 @@ const RangeCalendarFilter = ({
   const navigateMonth = (direction) => {
     const newMonth = new Date(currentMonth);
     newMonth.setMonth(currentMonth.getMonth() + direction);
+
+    // Define minimum and maximum dates
+    const minDate = new Date('2020-01-01'); 
+    const maxDate = new Date();
+
+    // Check boundaries before updating
+    if (newMonth <= minDate) {
+      setIsPrevDisabled(true);
+      return; // Prevent navigation
+    }
+    if (newMonth > maxDate) {
+      setIsNextDisabled(true);
+      return; // Prevent navigation
+    }
+
+    // Update state if within bounds
     setCurrentMonth(newMonth);
+    setIsPrevDisabled(newMonth <= minDate);
+    setIsNextDisabled(newMonth >= maxDate);
   };
+
+  // Update button states on initial render and month change
+  useEffect(() => {
+    const minDate = new Date('2020-01-01');
+    const maxDate = new Date();
+    setIsPrevDisabled(currentMonth <= minDate);
+    setIsNextDisabled(currentMonth >= maxDate);
+  }, [currentMonth]);
 
   const clearFilter = () => {
     setStartDate(null);
@@ -114,52 +138,6 @@ const RangeCalendarFilter = ({
       day: 'numeric',
       year: 'numeric',
     });
-  };
-
-  // Drag handlers
-  const handleMouseDown = (e) => {
-    if (!modalRef.current) return;
-
-    setIsDragging(true);
-    const rect = modalRef.current.getBoundingClientRect();
-    setDragOffset({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    });
-
-    // Prevent text selection during drag
-    e.preventDefault();
-  };
-
-  const handleMouseMove = (e) => {
-    if (!isDragging || !modalRef.current) return;
-
-    const newX = e.clientX - dragOffset.x;
-    const newY = e.clientY - dragOffset.y;
-
-    // Get viewport dimensions to constrain the modal
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const modalRect = modalRef.current.getBoundingClientRect();
-
-    // Constrain to viewport bounds
-    const constrainedX = Math.max(
-      0,
-      Math.min(newX, viewportWidth - modalRect.width)
-    );
-    const constrainedY = Math.max(
-      0,
-      Math.min(newY, viewportHeight - modalRect.height)
-    );
-
-    setModalPosition({
-      x: constrainedX,
-      y: constrainedY,
-    });
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
   };
 
   // Sync with props when they change
@@ -189,21 +167,6 @@ const RangeCalendarFilter = ({
     }
   }, [isOpen]);
 
-  // Handle drag events
-  useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.body.style.userSelect = 'none'; // Prevent text selection
-
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-        document.body.style.userSelect = '';
-      };
-    }
-  }, [isDragging, dragOffset]);
-
   // Reset modal position when opening
   useEffect(() => {
     if (isOpen) {
@@ -219,7 +182,7 @@ const RangeCalendarFilter = ({
       {/* Filter Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className='flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+        className='flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer'
       >
         <Calendar className='w-4 h-4 text-gray-500' />
         <span className='text-sm'>
@@ -227,7 +190,7 @@ const RangeCalendarFilter = ({
             ? `${formatDate(startDate)} - ${formatDate(endDate)}`
             : 'Select date range'}
         </span>
-        <Filter className='w-4 h-4 text-gray-400' />
+        <Filter className='w-4 h-4 text-gray-400 cursor-pointer' />
       </button>
 
       {/* Calendar Dropdown */}
@@ -247,36 +210,21 @@ const RangeCalendarFilter = ({
             width: '320px',
           }}
         >
-          {/* Draggable Header */}
-          <div
-            ref={dragRef}
-            onMouseDown={handleMouseDown}
-            className={`flex items-center justify-between p-3 bg-gray-50 rounded-t-lg border-b border-gray-200 cursor-move select-none ${
-              isDragging ? 'bg-gray-100' : 'hover:bg-gray-100'
-            }`}
-          >
-            <div className='flex items-center gap-2'>
-              <Move className='w-4 h-4 text-gray-500' />
-              <span className='text-sm font-medium text-gray-700'>
-                Date Range Filter
-              </span>
-            </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              className='p-1 hover:bg-gray-200 rounded-md transition-colors'
-            >
-              <X className='w-4 h-4 text-gray-500' />
-            </button>
-          </div>
-
           <div className='p-4'>
             {/* Month Navigation Header */}
             <div className='flex items-center justify-between mb-4'>
               <button
                 onClick={() => navigateMonth(-1)}
-                className='p-1 hover:bg-gray-100 rounded'
+                disabled={isPrevDisabled}
+                className={`p-1 hover:bg-gray-100 rounded ${
+                  isPrevDisabled ? 'cursor-not-allowed' : ''
+                }`}
               >
-                <ChevronLeft className='w-5 h-5' />
+                <ChevronLeft
+                  className={`w-5 h-5 ${
+                    isPrevDisabled ? 'text-slate-300' : ''
+                  }`}
+                />
               </button>
               <div className='flex gap-2'>
                 <select
@@ -303,8 +251,8 @@ const RangeCalendarFilter = ({
                   }}
                   className='px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500'
                 >
-                  {Array.from({ length: 21 }, (_, i) => {
-                    const year = new Date().getFullYear() - 10 + i;
+                  {Array.from({ length: 6 }, (_, i) => {
+                    const year = 2020 + i; // Starts at 2020 and increments to 2025
                     return (
                       <option key={year} value={year}>
                         {year}
@@ -315,9 +263,12 @@ const RangeCalendarFilter = ({
               </div>
               <button
                 onClick={() => navigateMonth(1)}
-                className='p-1 hover:bg-gray-100 rounded'
+                disabled={isNextDisabled}
+                className={`p-1 hover:bg-gray-100 rounded ${
+                  isNextDisabled ? 'cursor-not-allowed' : ''
+                }`}
               >
-                <ChevronRight className='w-5 h-5' />
+                <ChevronRight className={`w-5 h-5 ${isNextDisabled ? 'text-slate-300':''}`} />
               </button>
             </div>
 
@@ -343,29 +294,43 @@ const RangeCalendarFilter = ({
                 const isStart = isSameDay(date, startDate);
                 const isEnd = isSameDay(date, endDate);
                 const inRange = isInRange(date);
-                //set the date can only be select by user
-                const minDate = new Date('2024-01-01');
-                const maxDate = new Date('2025-12-31');
-                const isPast = date < minDate || date > maxDate;
+
+                // Date restrictions - FIXED: Create date objects for proper comparison
+                const minDate = new Date('2020-01-01');
+                minDate.setHours(0, 0, 0, 0); // Set to start of min date
+
+                const today = new Date();
+                today.setHours(23, 59, 59, 999); // Set to end of today
+
+                // Create a copy of the date for comparison (without time)
+                const compareDate = new Date(date);
+                compareDate.setHours(0, 0, 0, 0);
+
+                const isBeforeMinDate = compareDate < minDate;
+                const isAfterToday = compareDate > today;
+                const isDisabled = isBeforeMinDate || isAfterToday;
+
+                // Determine if this date can be clicked
+                const canClick = isCurrentMonth && !isDisabled;
 
                 return (
                   <button
                     key={index}
-                    onClick={() => !isPast && handleDateClick(date)}
-                    disabled={isPast}
+                    onClick={() => canClick && handleDateClick(date)}
+                    disabled={!canClick}
                     className={`
                       w-8 h-8 text-sm rounded-md transition-colors
                       ${
                         !isCurrentMonth
                           ? 'text-gray-300 cursor-not-allowed'
-                          : isPast
-                          ? 'text-gray-300 cursor-not-allowed'
-                          : 'text-gray-700 hover:bg-blue-100'
+                          : isDisabled
+                          ? 'text-red-300 cursor-not-allowed line-through'
+                          : 'text-gray-700 hover:bg-blue-100 cursor-pointer'
                       }
                       ${
                         isStart || isEnd
                           ? 'bg-blue-500 text-white hover:bg-blue-600'
-                          : inRange
+                          : inRange && !isDisabled
                           ? 'bg-blue-100 text-blue-700'
                           : ''
                       }

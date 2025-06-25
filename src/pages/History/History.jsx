@@ -1,5 +1,12 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Download, FileText, Calendar, Filter } from 'lucide-react';
+import {
+  Search,
+  Download,
+  FileText,
+  Calendar,
+  Loader2,
+  Filter,
+} from 'lucide-react';
 import RangeCalendarFilter from './Calendar';
 import useHistory from './hooks/useHistory';
 import useDownload from './hooks/useDownload';
@@ -15,26 +22,15 @@ const History = () => {
     startDate: null,
     endDate: null,
   });
-  // const {
-  //   downloadData,
-  //   loading: downloadLoading,
-  //   error: downloadError,
-  // } = useDownload();
 
   const handleDownloadMatched = (item) => {
-    // if (!loading && !downloadLoading) {
-    //   downloadData(item, 'matched');
-    // }
-    alert('Downloading Matched data for item:' + item.id);
-    
+    alert('Downloading Matched data for item:' + item.metadata_id);
+    useDownload('match', item.metadata_id, 'csv');
   };
 
   const handleDownloadUnmatched = (item) => {
-    // if (!loading && !downloadLoading) {
-    //   downloadData(item, 'unmatched');
-    // }
-    alert('Downloading Unmatched data for item:' + item.id);
-    
+    alert('Downloading Unmatched data for item:' + item.metadata_id);
+    useDownload('unmatch', item.metadata_id, 'csv');
   };
 
   const handleSort = (field) => {
@@ -47,11 +43,8 @@ const History = () => {
   };
 
   const filteredAndSortedData = useMemo(() => {
-    // Extract the actual array from the nested response structure
     let dataArray = [];
-
     if (historyData) {
-      // Try different possible nested structures
       if (
         historyData['Postgre history data'] &&
         Array.isArray(historyData['Postgre history data'])
@@ -72,24 +65,18 @@ const History = () => {
     }
 
     let filtered = dataArray;
-
-    console.log('dataaray: ', filtered);
-
-    // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter((item) =>
         item.institution_name?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
-    // Filter by date range
     if (dateFilter && dateFilter.startDate && dateFilter.endDate) {
       filtered = filtered.filter((item) => {
-        const itemDate = new Date(item.completion_date);
+        const itemDate = new Date(item.last_update.split('T')[0]);
         const startDate = new Date(dateFilter.startDate);
         const endDate = new Date(dateFilter.endDate);
 
-        // Set time to start/end of day for accurate comparison
         startDate.setHours(0, 0, 0, 0);
         endDate.setHours(23, 59, 59, 999);
 
@@ -97,7 +84,6 @@ const History = () => {
       });
     }
 
-    // Filter by status (if you have this filter)
     if (statusFilter && statusFilter !== 'all') {
       filtered = filtered.filter((item) => {
         switch (statusFilter) {
@@ -117,14 +103,13 @@ const History = () => {
       });
     }
 
-    // Sort data
     filtered.sort((a, b) => {
       let aValue, bValue;
 
       switch (sortBy) {
         case 'date':
-          aValue = new Date(a.completion_date);
-          bValue = new Date(b.completion_date);
+          aValue = new Date(a.last_update.split('T')[0]);
+          bValue = new Date(b.last_update.split('T')[0]);
           break;
         case 'institution_name':
           aValue = (a.institution_name || '').toLowerCase();
@@ -142,6 +127,9 @@ const History = () => {
           aValue = a.unmatched || 0;
           bValue = b.unmatched || 0;
           break;
+        case 'unmatched_percentage':
+          aValue = a.unmatched_percentage || 0;
+          bValue = b.unmatched_percentage || 0;
         default:
           return 0;
       }
@@ -165,8 +153,8 @@ const History = () => {
     return sortOrder === 'asc' ? '↑' : '↓';
   };
 
-  const highlightSearchTerm = (text, searchTerm) => {
-    if (!text || !searchTerm.trim()) return text || '';
+  const highlightSearchTerm = (text, searchTerm, highlight = true) => {
+    if (!text || !searchTerm?.trim() || !highlight) return text || '';
 
     const regex = new RegExp(
       `(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`,
@@ -179,7 +167,6 @@ const History = () => {
       );
   };
 
-  // Get the total count for display
   const getTotalRecordCount = () => {
     if (!historyData) return 0;
 
@@ -196,44 +183,32 @@ const History = () => {
     return 0;
   };
 
-  useEffect(() => {
-    console.log('historyData:', historyData);
-    console.log('historyData[data]:', historyData?.['Postgre history data']);
-    console.log('historyData type:', typeof historyData);
-    console.log('is array:', Array.isArray(historyData));
-  }, [historyData]);
-
-  // Loading state
   if (loading) {
     return (
-      <div id='historyPage' className=''>
-        <div className='bg-white p-6 rounded-xl shadow-sm'>
-          <div className='flex justify-center items-center h-64'>
-            <div className='text-gray-500'>Loading history data...</div>
-          </div>
+      <div className='p-6 flex items-center justify-center min-h-[400px]'>
+        <div className='text-center'>
+          <Loader2 className='animate-spin w-8 h-8 mx-auto mb-4 text-blue-600 mt-5' />
+          <p className='text-gray-600'>Loading...</p>
         </div>
       </div>
     );
   }
 
-  // Error state
   if (error) {
     return (
-      <div id='historyPage' className=''>
-        <div className='bg-white p-6 rounded-xl shadow-sm'>
-          <div className='flex justify-center items-center h-64'>
-            <div className='text-red-500'>Error loading data: {error}</div>
-          </div>
+      <div className='p-6'>
+        <div className='bg-red-50 border border-red-200 rounded-lg p-4'>
+          <h3 className='text-red-800 font-medium'>Error Loading Page</h3>
+          <p className='text-red-600 mt-1'>{error}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div id='historyPage' className=''>
-      <div className='bg-white p-6 rounded-xl shadow-sm'>
+    <div id='historyPage' className='relative'>
+      <div className='bg-white p-6 rounded-xl shadow-sm absolute top-0 left-0 '>
         <div className='mb-6 space-y-4'>
-          {/* Filter Controls */}
           <div className='flex flex-wrap gap-4 items-center justify-between'>
             <div className='flex flex-row gap-3'>
               <div className='flex items-center gap-2'>
@@ -242,8 +217,6 @@ const History = () => {
                   Filters:
                 </span>
               </div>
-
-              {/* Date Range Filter - ADD THIS */}
               <RangeCalendarFilter
                 onDateChange={(start, end) =>
                   setDateFilter({ startDate: start, endDate: end })
@@ -274,54 +247,63 @@ const History = () => {
             <thead className='text-xs text-slate-500 uppercase bg-slate-50'>
               <tr>
                 <th
-                  className='px-6 py-3 cursor-pointer hover:bg-slate-100'
-                  onClick={() => handleSort('institution_name')}
+                  className='px-6 py-3'
+                  // onClick={() => handleSort('institution_name')}
                 >
                   <div className='flex items-center gap-1'>
                     Ministry/Institution
-                    <span className='text-xs'>
+                    {/* <span className='text-xs'>
                       {getSortIcon('institution_name')}
-                    </span>
+                    </span> */}
                   </div>
                 </th>
                 <th
-                  className='px-6 py-3 cursor-pointer hover:bg-slate-100'
-                  onClick={() => handleSort('date')}
+                  className='px-6 py-3'
+                  // onClick={() => handleSort('date')}
                 >
                   <div className='flex items-center gap-1'>
                     Completion Date
-                    <span className='text-xs'>{getSortIcon('date')}</span>
+                    {/* <span className='text-xs'>{getSortIcon('date')}</span> */}
                   </div>
                 </th>
                 <th
-                  className='px-6 py-3 cursor-pointer hover:bg-slate-100'
-                  onClick={() => handleSort('automatched')}
+                  className='px-6 py-3'
+                  // onClick={() => handleSort('automatched')}
                 >
                   <div className='flex items-center gap-1'>
                     Auto Matched
-                    <span className='text-xs'>
+                    {/* <span className='text-xs'>
                       {getSortIcon('automatched')}
-                    </span>
+                    </span> */}
                   </div>
                 </th>
                 <th
-                  className='px-6 py-3 cursor-pointer hover:bg-slate-100'
-                  onClick={() => handleSort('manualmatched')}
+                  className='px-6 py-3'
+                  // onClick={() => handleSort('manualmatched')}
                 >
                   <div className='flex items-center gap-1'>
                     Manual Matched
-                    <span className='text-xs'>
+                    {/* <span className='text-xs'>
                       {getSortIcon('manualmatched')}
-                    </span>
+                    </span> */}
                   </div>
                 </th>
                 <th
-                  className='px-6 py-3 cursor-pointer hover:bg-slate-100'
-                  onClick={() => handleSort('unmatched')}
+                  className='px-6 py-3'
+                  // onClick={() => handleSort('unmatched')}
                 >
                   <div className='flex items-center gap-1'>
                     Unmatched
-                    <span className='text-xs'>{getSortIcon('unmatched')}</span>
+                    {/* <span className='text-xs'>{getSortIcon('unmatched')}</span> */}
+                  </div>
+                </th>
+                <th
+                  className='px-6 py-3'
+                  // onClick={() => handleSort('unmatched_percentage')}
+                >
+                  <div className='flex items-center gap-1 whitespace-nowrap'>
+                    % Unmatched
+                    {/* <span className='text-xs'>{getSortIcon('unmatched_percentage')}</span> */}
                   </div>
                 </th>
                 <th className='px-6 py-3 text-center'>Action</th>
@@ -334,10 +316,12 @@ const History = () => {
                     key={item.id}
                     className='bg-white border-b border-slate-300 hover:bg-slate-50'
                   >
-                    <td className='px-6 py-4 font-medium'>
-                      {highlightSearchTerm(item.institution_name, searchTerm)}
+                    <td className='px-6 py-4'>
+                      {highlightSearchTerm(item.institution_name, searchTerm, false)}
                     </td>
-                    <td className='px-6 py-4'>{item.completion_date}</td>
+                    <td className='px-6 py-4'>
+                      {item.last_update.split('T')[0]}
+                    </td>
                     <td className='px-6 py-4 text-green-600'>
                       {formatNumber(item.auto_matched)}
                     </td>
@@ -346,6 +330,9 @@ const History = () => {
                     </td>
                     <td className='px-6 py-4 text-red-600'>
                       {formatNumber(item.unmatched)}
+                    </td>
+                    <td className='px-6 py-4 text-red-600'>
+                      {formatNumber(item.unmatched_percentage)}%
                     </td>
                     <td className='flex px-6 py-4 text-center space-x-2'>
                       <button
@@ -381,87 +368,11 @@ const History = () => {
               )}
             </tbody>
           </table>
-          {/* Results Count */}
           <div className='ml-auto text-sm text-gray-600 mt-4'>
             Showing {filteredAndSortedData?.length} of {getTotalRecordCount()}{' '}
             records
           </div>
         </div>
-
-        {/* Summary Stats */}
-        {filteredAndSortedData?.length > 0 && (
-          <div className='mt-6 pt-4 border-t border-gray-200'>
-            <div className='grid grid-cols-1 md:grid-cols-4 gap-4 text-sm'>
-              <div className='bg-blue-50 p-3 rounded-lg'>
-                <p className='text-blue-600 font-medium'>Total Records</p>
-                <p className='text-lg font-bold text-blue-800'>
-                  {formatNumber(
-                    filteredAndSortedData.reduce(
-                      (sum, item) =>
-                        sum +
-                        (item.auto_matched || 0) +
-                        (item.manual_matched || 0) +
-                        (item.unmatched || 0),
-                      0
-                    )
-                  )}
-                </p>
-              </div>
-              <div className='bg-green-50 p-3 rounded-lg'>
-                <p className='text-green-600 font-medium'>Total Matched</p>
-                <p className='text-lg font-bold text-green-800'>
-                  {formatNumber(
-                    filteredAndSortedData.reduce(
-                      (sum, item) =>
-                        sum +
-                        (item.auto_matched || 0) +
-                        (item.manual_matched || 0),
-                      0
-                    )
-                  )}
-                </p>
-              </div>
-              <div className='bg-red-50 p-3 rounded-lg'>
-                <p className='text-red-600 font-medium'>Total Unmatched</p>
-                <p className='text-lg font-bold text-red-800'>
-                  {formatNumber(
-                    filteredAndSortedData.reduce(
-                      (sum, item) => sum + (item.unmatched || 0),
-                      0
-                    )
-                  )}
-                </p>
-              </div>
-              <div className='bg-purple-50 p-3 rounded-lg'>
-                <p className='text-purple-600 font-medium'>
-                  Average Match Rate
-                </p>
-                <p className='text-lg font-bold text-purple-800'>
-                  {filteredAndSortedData.length > 0
-                    ? (
-                        filteredAndSortedData.reduce((sum, item) => {
-                          const totalRecords =
-                            (item.auto_matched || 0) +
-                            (item.manual_matched || 0) +
-                            (item.unmatched || 0);
-                          const matched =
-                            (item.auto_matched || 0) +
-                            (item.manual_matched || 0);
-                          return (
-                            sum +
-                            (totalRecords > 0
-                              ? (matched / totalRecords) * 100
-                              : 0)
-                          );
-                        }, 0) / filteredAndSortedData.length
-                      ).toFixed(1)
-                    : 0}
-                  %
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
