@@ -2,13 +2,13 @@ import { useState } from 'react';
 import axiosInstance from '../../../axios/axiosInstance';
 
 const useSync = () => {
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState(null);
+  const [loadingSync, setLoadingSync] = useState(false);
+  const [errorSync, setErrorSync]     = useState(null);
   const [response, setResponse] = useState(null);
 
   const syncByGrade = async (id, grade) => {
-    setLoading(true);
-    setError(null);
+    setLoadingSync(true);
+    setErrorSync(null);
 
     const lowerGrade = grade?.toLowerCase();
 
@@ -22,14 +22,14 @@ const useSync = () => {
       setResponse(res.data);
       return res.data;
     } catch (err) {
-      setError(err);
+      setErrorSync(err);
       return null;
     } finally {
-      setLoading(false);
+      setLoadingSync(false);
     }
   };
 
-  return { syncByGrade, loading, error, response };
+  return { syncByGrade, loadingSync, errorSync, response };
 };
 
 export default useSync;

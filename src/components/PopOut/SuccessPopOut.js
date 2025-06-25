@@ -1,9 +1,9 @@
 import Swal from "sweetalert2";
 
-export const SuccessPopOut = (title, text) => { 
+export const SuccessPopOut = (title, icon, text) => { 
     return(Swal.fire({
         title: title,
-        icon: "success",
+        icon: icon || "success",
         text: text,
         draggable: false
       })

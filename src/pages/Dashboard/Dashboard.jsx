@@ -5,12 +5,34 @@ import { FileCog } from 'lucide-react';
 import { CheckCheck } from 'lucide-react';
 import Chart from 'chart.js/auto';
 import useDashboard from './hooks/useDashboard';
+import { useNavigate } from 'react-router-dom';
+import useGetData from "../BatchSynchronization/hooks/useGetData";
+
 
 const Dashboard = () => {
   const [activePage, setActivePage] = useState(null);
   const gradeBarChartRef = useRef(null);
   const gradeChartInstance = useRef(null);
   const { dashboardData, loading, error } = useDashboard();
+  const { data, refetch } = useGetData();
+
+  const [filteredData, setFilteredData] = useState([]);
+    useEffect(() => {
+    if (!data || data.length === 0) {
+      setFilteredData([]);
+      return;
+    }
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    const filtered = data.filter((item) => {
+      const itemDateStr = item.inserted_date?.slice(0, 10);
+      return itemDateStr === todayStr;
+    });
+
+    setFilteredData(filtered);
+  }, [data]);
+
 
   const computedData = useMemo(() => {
     if (!dashboardData) {
@@ -209,17 +231,68 @@ const Dashboard = () => {
     };
   }, [activePage, computedData, loading]);
 
-  const handleInvestigate = (institution, grade) => {
-    setActivePage({ type: 'investigation', institution, grade });
+  const navigate = useNavigate();
+  const statusColor = {
+    "awaiting action": "bg-red-100 text-red-800",
+    "in progress": "bg-orange-100 text-orange-800",
+    "completed": "bg-green-100 text-green-800",
+  };  const showInvestigationPage = (id, name, grade) => {
+    navigate('/batch-synchronization/investigate', {
+      state: {
+        metadata_id: id,
+        institutionName: name,
+        statusGrade: grade,
+        data: [
+          {
+            institution_id: "12324",
+            name: "TIMOTHY",
+            birthdate: "09-09-1999",
+            similiarity_data: [
+              { nik: "digidaw", name: "TIMOTHY r", reason: "lorem ipsum" },
+              { nik: "digidaw3", name: "TMOMOTH", reason: "lorem ipsum2" },
+            ],
+          },
+          {
+            institution_id: "0000",
+            name: "KALIMASADA",
+            birthdate: "09-09-1999",
+            similiarity_data: [
+              { nik: "00000", name: "KALIMASADA", reason: "lorem ipsum" },
+              { nik: "000000", name: "KALISAMADA", reason: "lorem ipsum3" },
+            ],
+          },
+        ],
+      },
+    });
+
+    console.log("masuk")
   };
 
-  const handleView = (institution, grade) => {
-    setActivePage({ type: 'matched', institution, grade });
+  const showMatchedPage = (name, grade) => {
+    navigate('/batch-synchronization/preview', {
+      state: {
+        institutionName: name,
+        matchedSourceData: [
+          { nik: "1234123412341234", nama: "Kalimasada", tempat_lahir: "Pondok Indah Mall", tanggal_lahir: "09-09-1999", nama_ibu: "Putri" },
+          { nik: "9999888877776666", nama: "Timothy Ronald", tempat_lahir: "Pantai Indah Kapuk", tanggal_lahir: "09-09-1999", nama_ibu: "Liliana" },
+        ],
+        matchedDukcapilData: [
+          { nik: "1234123412341234", nama: "Kalimasada", tempat_lahir: "Pondok Indah Mall", tanggal_lahir: "09-09-1999", nama_ibu: "Putri" },
+          { nik: "9999888877776666", nama: "Timothy Ronald", tempat_lahir: "Pantai Indah Kapuk", tanggal_lahir: "09-09-1999", nama_ibu: "Liliana" },
+        ],
+        unmatchedSourceData: [
+          { nik: "6666666666666666", nama: "Wijaya", tempat_lahir: "Central Park", tanggal_lahir: "09-09-2000", nama_ibu: "Olivia" },
+        ],
+      }
+    });
+    console.log("masuk")
   };
 
-  const handleBack = () => {
-    setActivePage(null);
-  };
+  const toTitleCase = (text) =>
+  text
+    .split(" ")
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 
   if (loading) {
     return (
@@ -319,70 +392,60 @@ const Dashboard = () => {
         {/* Recent Batches Table */}
         <div className='xl:col-span-1 bg-white p-6 rounded-xl shadow-sm'>
           <h3 className='font-semibold text-lg mb-4'>Recent Batches</h3>
-          <div className='overflow-x-auto'>
-            <table className='w-full text-sm text-left'>
-              <thead className='text-xs text-slate-500 uppercase bg-slate-50'>
+                    <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs text-slate-500 uppercase bg-slate-50">
                 <tr>
-                  <th className='px-6 py-3'>Ministry/Institution</th>
-                  <th className='px-6 py-3'>Status</th>
-                  <th className='px-6 py-3 text-center'>Action</th>
+                  <th className="px-6 py-3">Ministry/Institution</th>
+                  <th className="px-6 py-3">Status</th>
+                  <th className="px-6 py-3 text-center">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {computedData &&
-                computedData.recentBatches &&
-                computedData.recentBatches.length > 0 ? (
-                  computedData.recentBatches.map((batch, index) => (
-                    <tr
-                      key={index}
-                      className='bg-white border-b border-slate-200 hover:bg-slate-50'
-                    >
-                      <td className='px-6 py-4 font-medium'>
-                        {batch.institution}
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap'>
-                      {batch.status ? (
-                        <span
-                          className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            batch.status === 'Awaiting Action'
-                              ? 'bg-red-100 text-red-800'
-                              : batch.status === 'In Progress'
-                              ? 'bg-orange-100 text-orange-800'
-                              : 'bg-green-100 text-green-800'
-                          }`}
-                        >
-                          {batch.status}
-                        </span>
+                {[...filteredData]
+                .sort((a, b) => new Date(b.inserted_date) - new Date(a.inserted_date))
+                .map((item, idx) => (
+                  <tr key={idx}>
+                    <td className="px-6 py-4 font-medium">{item.institution_name}</td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`${statusColor[item.status_proses]} text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full`}
+                      >
+                        {toTitleCase(item.status_proses)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      {item.status_proses.toLowerCase() === "completed" || item.status_proses.toLowerCase() === "in progress" ? (
+                          <button
+                            onClick={() => {
+                              if (item.status_proses.toLowerCase() === "completed") {
+                                showMatchedPage(item.institution_name, item.grade);
+                              }
+                            }}
+                            disabled={item.status_proses.toLowerCase() === "in progress"}
+                            className={`font-medium ${
+                              item.status_proses.toLowerCase() === "in progress"
+                                ? "text-gray-400 cursor-not-allowed"
+                                : "text-blue-600 hover:underline cursor-pointer"
+                            }`}
+                          >
+                            Preview
+                          </button>
                       ) : (
-                        <span className='text-slate-500'></span>
-                      )}
-                      </td>
-                      <td className='px-6 py-4 text-center'>
                         <button
-                          onClick={() =>
-                            batch.status === 'Completed'
-                              ? handleView(batch.institution, batch.grade)
-                              : handleInvestigate(
-                                  batch.institution,
-                                  batch.grade
-                                )
-                          }
-                          className='font-medium text-blue-600 hover:underline'
+                          onClick={() => showInvestigationPage(item.metadata_id, item.institution_name, item.grade)}
+                          className="font-medium text-blue-600 hover:underline cursor-pointer"
                         >
-                          {batch.status === 'Completed'
-                            ? 'View'
-                            : 'Investigate'}
+                          Investigate
                         </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {filteredData.length === 0 && (
                   <tr>
-                    <td
-                      colSpan={3}
-                      className='text-sm text-center text-slate-500 py-6'
-                    >
-                      No data available.
+                    <td colSpan={5} className="px-6 py-4 text-center text-slate-500">
+                      No data found.
                     </td>
                   </tr>
                 )}

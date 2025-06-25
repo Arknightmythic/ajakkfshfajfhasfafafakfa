@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { FileText, FileX2 } from "lucide-react";
 import { Trash } from 'lucide-react';
@@ -6,6 +6,7 @@ import useUploadFile from "./hooks/useUploadFile";
 import useGetData from "./hooks/useGetData";
 import useSync from "./hooks/useSync";
 import { ErrorPopOut } from "../../components/PopOut/ErrorPopOut";
+import { SuccessPopOut } from "../../components/PopOut/SuccessPopOut";
 
 const UploadAndGrading = () => {
   const [institution, setInstitution] = useState("");
@@ -16,7 +17,7 @@ const UploadAndGrading = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const { uploadFile, isUploading } = useUploadFile();
 
-  const { data, refetch } = useGetData();
+  const { data, loading, error, refetch } = useGetData();
 
   const [filteredData, setFilteredData] = useState([]);
   useEffect(() => {
@@ -74,10 +75,10 @@ const UploadAndGrading = () => {
     setSelectedFile(null);
   };
 
-  const { syncByGrade, loading, error } = useSync();
-
+  const { syncByGrade, loadingSync, errorSync } = useSync();
   const handleSync = async (id, grade) => {
-    const result = await syncByGrade(id, "F");
+    SuccessPopOut("Synchronizing...", "info", "You can go to Batch Synchronization menu to check the the progress.")
+    const result = await syncByGrade(id, grade);
     if (result) {
       console.log('Success:', result);
       refetch()
@@ -86,6 +87,28 @@ const UploadAndGrading = () => {
       ErrorPopOut()
     }
   };
+
+  if (loading) {
+    return (
+      <div className='p-6 flex items-center justify-center min-h-[400px]'>
+        <div className='text-center'>
+          <Loader2 className='animate-spin w-8 h-8 mx-auto mb-4 text-blue-600' />
+          <p className='text-gray-600'>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+    if (error) {
+    return (
+      <div className='p-6'>
+        <div className='bg-red-50 border border-red-200 rounded-lg p-4'>
+          <h3 className='text-red-800 font-medium'>Error Loading Page</h3>
+          <p className='text-red-600 mt-1'>{error.message}</p>
+        </div>
+      </div>
+    );
+  }
 
 
   return (
@@ -245,13 +268,15 @@ const UploadAndGrading = () => {
                   </td>
                   <td className="px-6 py-4 text-center">
                     <button
-                      disabled={item.status_proses === "completed"}
+                      disabled={loadingSync || item.status_proses.toLowerCase() === ""}
                       onClick={() => handleSync(item.id, item.grade)}
                       className={`font-medium text-blue-600 ${
-                        item.status_proses === "completed" ? "cursor-not-allowed text-slate-400 hover:no-underline" : "hover:underline cursor-pointer"
+                        loadingSync || item.status_proses.toLowerCase() === ""
+                          ? "cursor-not-allowed text-slate-400 hover:no-underline"
+                          : "hover:underline cursor-pointer"
                       }`}
                     >
-                      Start Synchronization
+                      {loadingSync ? "Submitting..." : "Start Synchronization"}
                     </button>
                   </td>
                 </tr>

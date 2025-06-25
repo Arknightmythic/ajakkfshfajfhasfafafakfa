@@ -105,28 +105,34 @@ const InvestigatePage = () => {
     if (!selectedSource) return;
 
     const simData = selectedSource.similiarity_data || [];
+    const selected = simData[selectedMatchIndex];
 
-    const result = simData.map((item, idx) => ({
-      institution_id: selectedSource.institution_id,
-      nik: item.nik,
-      is_match: idx === selectedMatchIndex ? 1 : 0,
-    }));
+    const result =
+      {
+        institution_id: selectedSource.institution_id,
+        nik: selected.nik,
+        is_match: 1,
+      }
 
     console.log(result);
   };
 
   const handleMarkAsUnmatch = () => {
-    if (!selectedSource) return;
+  if (!selectedSource) return;
 
-    const simData = selectedSource.similiarity_data || [];
-    const result = {
+  const simData = selectedSource.similiarity_data || [];
+  const selected = simData[selectedMatchIndex];
+
+  const result =
+    {
       institution_id: selectedSource.institution_id,
-      nik: simData[selectedMatchIndex]?.nik,
+      nik: selected.nik,
       is_match: 0,
-    };
+    }
 
-    console.log(result);
-  };
+  console.log(result);
+};
+
 
 
   return (
@@ -154,7 +160,7 @@ const InvestigatePage = () => {
               async () => {
                 // const success = await completeInvestigation(metadata_id);
                 // if (success) {
-                  SuccessPopOut("Success", "Investigation marked as completed successfully.")
+                  SuccessPopOut("Success", "success", "Investigation marked as completed successfully.")
                     .then(() => navigate("/batch-synchronization"));
                 // }
               }

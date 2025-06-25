@@ -1,12 +1,16 @@
-import { useState } from "react";
-import { Search } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Loader2, Search } from "lucide-react";
 import PreviewPage from "./components/PreviewPage";
 import { useNavigate } from "react-router-dom";
+import useGetData from "../BatchSynchronization/hooks/useGetData";
 
 const BatchSynchronization = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [gradeFilter, setGradeFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+
+  const { data, loading, error, refetch } = useGetData();
+
 
   const [currentPage, setCurrentPage] = useState("list");
   const [selectedPreviewData, setSelectedPreviewData] = useState({
@@ -16,43 +20,6 @@ const BatchSynchronization = () => {
   });
 
   const navigate = useNavigate();
-  const data = [
-    {
-      metadata_id: "1",
-      name: "Ministry of Social Affairs",
-      total: "150,000",
-      grade: "E",
-      status: "Awaiting Action",
-    },
-    {
-      metadata_id: "2",
-      name: "Ministry of Health",
-      total: "2,500,000",
-      grade: "E",
-      status: "In Progress",
-    },
-    {
-      metadata_id: "3",
-      name: "Ministry of Finance",
-      total: "25,000",
-      grade: "B",
-      status: "Awaiting Action",
-    },
-    {
-      metadata_id: "4",
-      name: "Ministry of Education",
-      total: "12,000",
-      grade: "C",
-      status: "Awaiting Action",
-    },
-    {
-      metadata_id: "4",
-      name: "State Civil Service Agency",
-      total: "75,000",
-      grade: "A",
-      status: "Completed",
-    },
-  ];
 
   const gradeColor = {
     A: "bg-green-200 text-green-800",
@@ -63,19 +30,32 @@ const BatchSynchronization = () => {
   };
 
   const statusColor = {
-    "Awaiting Action": "bg-red-100 text-red-800",
-    "In Progress": "bg-orange-100 text-orange-800",
-    "Completed": "bg-green-100 text-green-800",
+    "awaiting action": "bg-red-100 text-red-800",
+    "in progress": "bg-orange-100 text-orange-800",
+    "completed": "bg-green-100 text-green-800",
   };
 
-  const filteredData = data.filter((item) => {
-    const matchSearch = item.name
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    const matchGrade = gradeFilter ? item.grade === gradeFilter : true;
-    const matchStatus = statusFilter ? item.status === statusFilter : true;
-    return matchSearch && matchGrade && matchStatus;
-  });
+
+    const [filteredData, setFilteredData] = useState([]);
+    useEffect(() => {
+      if (!data || data.length === 0) {
+        setFilteredData([]);
+        return;
+      }
+
+      const search = searchTerm.toLowerCase();
+
+      const filtered = data.filter((item) => {
+        const matchesSearch = item.institution_name?.toLowerCase().includes(search);
+        const matchesGrade = gradeFilter.toLowerCase() ? item.grade.toLowerCase() === gradeFilter.toLowerCase() : true;
+        const matchesStatus = statusFilter.toLowerCase() ? item.status_proses.toLowerCase() === statusFilter.toLowerCase() : true;
+
+        return matchesSearch && matchesGrade && matchesStatus;
+      });
+
+      setFilteredData(filtered);
+    }, [searchTerm, gradeFilter, statusFilter, data]);
+
 
   const showInvestigationPage = (id, name, grade) => {
     navigate('/batch-synchronization/investigate', {
@@ -129,7 +109,33 @@ const BatchSynchronization = () => {
     console.log("masuk")
   };
 
+  const toTitleCase = (text) =>
+  text
+    .split(" ")
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 
+  if (loading) {
+    return (
+      <div className='p-6 flex items-center justify-center min-h-[400px]'>
+        <div className='text-center'>
+          <Loader2 className='animate-spin w-8 h-8 mx-auto mb-4 text-blue-600' />
+          <p className='text-gray-600'>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+    if (error) {
+    return (
+      <div className='p-6'>
+        <div className='bg-red-50 border border-red-200 rounded-lg p-4'>
+          <h3 className='text-red-800 font-medium'>Error Loading Page</h3>
+          <p className='text-red-600 mt-1'>{error.message}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -181,10 +187,12 @@ const BatchSynchronization = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredData.map((item, idx) => (
+                {[...filteredData]
+                .sort((a, b) => new Date(b.inserted_date) - new Date(a.inserted_date))
+                .map((item, idx) => (
                   <tr key={idx}>
-                    <td className="px-6 py-4 font-medium">{item.name}</td>
-                    <td className="px-6 py-4">{item.total}</td>
+                    <td className="px-6 py-4 font-medium">{item.institution_name}</td>
+                    <td className="px-6 py-4">{item.total_records}</td>
                     <td className="px-6 py-4">
                       <span
                         className={`${gradeColor[item.grade]} font-bold text-xs px-2 py-1 rounded`}
@@ -194,22 +202,22 @@ const BatchSynchronization = () => {
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`${statusColor[item.status]} text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full`}
+                        className={`${statusColor[item.status_proses]} text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full`}
                       >
-                        {item.status}
+                        {toTitleCase(item.status_proses)}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      {item.status === "Completed" || item.status === "In Progress" ? (
+                      {item.status_proses.toLowerCase() === "completed" || item.status_proses.toLowerCase() === "in progress" ? (
                           <button
                             onClick={() => {
-                              if (item.status === "Completed") {
-                                showMatchedPage(item.name, item.grade);
+                              if (item.status_proses.toLowerCase() === "completed") {
+                                showMatchedPage(item.institution_name, item.grade);
                               }
                             }}
-                            disabled={item.status === "In Progress"}
+                            disabled={item.status_proses.toLowerCase() === "in progress"}
                             className={`font-medium ${
-                              item.status === "In Progress"
+                              item.status_proses.toLowerCase() === "in progress"
                                 ? "text-gray-400 cursor-not-allowed"
                                 : "text-blue-600 hover:underline cursor-pointer"
                             }`}
@@ -218,7 +226,7 @@ const BatchSynchronization = () => {
                           </button>
                       ) : (
                         <button
-                          onClick={() => showInvestigationPage(item.metadata_id, item.name, item.grade)}
+                          onClick={() => showInvestigationPage(item.metadata_id, item.institution_name, item.grade)}
                           className="font-medium text-blue-600 hover:underline cursor-pointer"
                         >
                           Investigate
