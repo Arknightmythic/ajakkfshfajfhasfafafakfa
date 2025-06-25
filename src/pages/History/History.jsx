@@ -153,8 +153,8 @@ const History = () => {
     return sortOrder === 'asc' ? '↑' : '↓';
   };
 
-  const highlightSearchTerm = (text, searchTerm, unhighlight = false) => {
-    if (!text || !searchTerm?.trim() || unhighlight) return text || '';
+  const highlightSearchTerm = (text, searchTerm, highlight = true) => {
+    if (!text || !searchTerm?.trim() || !highlight) return text || '';
 
     const regex = new RegExp(
       `(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`,
@@ -196,11 +196,10 @@ const History = () => {
 
   if (error) {
     return (
-      <div id='historyPage' className=''>
-        <div className='bg-white p-6 rounded-xl shadow-sm'>
-          <div className='flex justify-center items-center h-64'>
-            <div className='text-red-500'>Error loading data: {error}</div>
-          </div>
+      <div className='p-6'>
+        <div className='bg-red-50 border border-red-200 rounded-lg p-4'>
+          <h3 className='text-red-800 font-medium'>Error Loading Page</h3>
+          <p className='text-red-600 mt-1'>{error}</p>
         </div>
       </div>
     );
@@ -248,8 +247,8 @@ const History = () => {
             <thead className='text-xs text-slate-500 uppercase bg-slate-50'>
               <tr>
                 <th
-                  className='px-6 py-3 cursor-pointer hover:bg-slate-100'
-                  onClick={() => handleSort('institution_name')}
+                  className='px-6 py-3'
+                  // onClick={() => handleSort('institution_name')}
                 >
                   <div className='flex items-center gap-1'>
                     Ministry/Institution
@@ -259,8 +258,8 @@ const History = () => {
                   </div>
                 </th>
                 <th
-                  className='px-6 py-3 cursor-pointer hover:bg-slate-100'
-                  onClick={() => handleSort('date')}
+                  className='px-6 py-3'
+                  // onClick={() => handleSort('date')}
                 >
                   <div className='flex items-center gap-1'>
                     Completion Date
@@ -268,8 +267,8 @@ const History = () => {
                   </div>
                 </th>
                 <th
-                  className='px-6 py-3 cursor-pointer hover:bg-slate-100'
-                  onClick={() => handleSort('automatched')}
+                  className='px-6 py-3'
+                  // onClick={() => handleSort('automatched')}
                 >
                   <div className='flex items-center gap-1'>
                     Auto Matched
@@ -279,8 +278,8 @@ const History = () => {
                   </div>
                 </th>
                 <th
-                  className='px-6 py-3 cursor-pointer hover:bg-slate-100'
-                  onClick={() => handleSort('manualmatched')}
+                  className='px-6 py-3'
+                  // onClick={() => handleSort('manualmatched')}
                 >
                   <div className='flex items-center gap-1'>
                     Manual Matched
@@ -290,8 +289,8 @@ const History = () => {
                   </div>
                 </th>
                 <th
-                  className='px-6 py-3 cursor-pointer hover:bg-slate-100'
-                  onClick={() => handleSort('unmatched')}
+                  className='px-6 py-3'
+                  // onClick={() => handleSort('unmatched')}
                 >
                   <div className='flex items-center gap-1'>
                     Unmatched
@@ -299,8 +298,8 @@ const History = () => {
                   </div>
                 </th>
                 <th
-                  className='px-6 py-3 cursor-pointer hover:bg-slate-100'
-                  onClick={() => handleSort('unmatched_percentage')}
+                  className='px-6 py-3'
+                  // onClick={() => handleSort('unmatched_percentage')}
                 >
                   <div className='flex items-center gap-1 whitespace-nowrap'>
                     % Unmatched
@@ -317,7 +316,7 @@ const History = () => {
                     key={item.id}
                     className='bg-white border-b border-slate-300 hover:bg-slate-50'
                   >
-                    <td className='px-6 py-4 font-medium'>
+                    <td className='px-6 py-4'>
                       {highlightSearchTerm(item.institution_name, searchTerm, false)}
                     </td>
                     <td className='px-6 py-4'>
