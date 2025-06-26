@@ -26,11 +26,11 @@ const History = () => {
   const { downloadFile, loadingDownload } = useDownload();
 
   const handleDownloadMatched = (item) => {
-    downloadFile('match', item.metadata_id, 'csv');
+    downloadFile('match', item.metadata_id, 'csv', item.institution_name);
   };
 
   const handleDownloadUnmatched = (item) => {
-    downloadFile('unmatch', item.metadata_id, 'csv');
+    downloadFile('unmatch', item.metadata_id, 'csv', item.institution_name);
   };
 
   const handleSort = (field) => {
@@ -210,7 +210,7 @@ const History = () => {
       id='historyPage'
       className={`relative ${loadingDownload ? 'cursor-progress' : ''}`}
     >
-      <div className='bg-white p-6 rounded-xl shadow-sm absolute top-0 left-0 '>
+      <div className='bg-white p-6 rounded-xl shadow-sm'>
         <div className='mb-6 space-y-4'>
           <div className='flex flex-wrap gap-4 items-center justify-between'>
             <div className='flex flex-row gap-3'>
@@ -316,7 +316,7 @@ const History = () => {
               {filteredAndSortedData?.length > 0 ? (
                 filteredAndSortedData.map((item) => (
                   <tr
-                    key={item.id}
+                    key={item.metadata_id}
                     className='bg-white border-b border-slate-300 hover:bg-slate-50'
                   >
                     <td className='px-6 py-4'>

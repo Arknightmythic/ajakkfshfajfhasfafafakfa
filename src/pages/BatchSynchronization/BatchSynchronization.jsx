@@ -57,32 +57,13 @@ const BatchSynchronization = () => {
     }, [searchTerm, gradeFilter, statusFilter, data]);
 
 
+
   const showInvestigationPage = (id, name, grade) => {
     navigate('/batch-synchronization/investigate', {
       state: {
         metadata_id: id,
         institutionName: name,
-        statusGrade: grade,
-        data: [
-          {
-            institution_id: "12324",
-            name: "TIMOTHY",
-            birthdate: "09-09-1999",
-            similiarity_data: [
-              { nik: "digidaw", name: "TIMOTHY r", reason: "lorem ipsum" },
-              { nik: "digidaw3", name: "TMOMOTH", reason: "lorem ipsum2" },
-            ],
-          },
-          {
-            institution_id: "0000",
-            name: "KALIMASADA",
-            birthdate: "09-09-1999",
-            similiarity_data: [
-              { nik: "00000", name: "KALIMASADA", reason: "lorem ipsum" },
-              { nik: "000000", name: "KALISAMADA", reason: "lorem ipsum3" },
-            ],
-          },
-        ],
+        statusGrade: grade
       },
     });
 
@@ -131,7 +112,7 @@ const BatchSynchronization = () => {
       <div className='p-6'>
         <div className='bg-red-50 border border-red-200 rounded-lg p-4'>
           <h3 className='text-red-800 font-medium'>Error Loading Page</h3>
-          <p className='text-red-600 mt-1'>{error.message}</p>
+          <p className='text-red-600 mt-1'>{error.message || "Unknown error occurred."}</p>
         </div>
       </div>
     );
@@ -141,7 +122,7 @@ const BatchSynchronization = () => {
     <div>
       {currentPage === "list" && (
         <div className="bg-white p-6 rounded-xl shadow-sm">
-                  <div className="flex flex-wrap gap-4 items-center mb-4">
+          <div className="flex flex-wrap gap-4 items-center mb-4">
             <div className="relative flex-grow">
               <input
                 type="text"
@@ -202,7 +183,7 @@ const BatchSynchronization = () => {
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`${statusColor[item.status_proses]} text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full`}
+                        className={`${statusColor[item.status_proses.toLowerCase()]} text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full`}
                       >
                         {toTitleCase(item.status_proses)}
                       </span>
@@ -226,7 +207,7 @@ const BatchSynchronization = () => {
                           </button>
                       ) : (
                         <button
-                          onClick={() => showInvestigationPage(item.metadata_id, item.institution_name, item.grade)}
+                          onClick={() => showInvestigationPage(item.id, item.institution_name, item.grade)}
                           className="font-medium text-blue-600 hover:underline cursor-pointer"
                         >
                           Investigate

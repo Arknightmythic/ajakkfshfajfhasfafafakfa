@@ -10,7 +10,7 @@ const useHistory = () => {
     const fetchHistoryData = async () => {
       try {
         const response = await axiosInstance.general.get(
-          '/history'
+          '/history/'
         );
         setHistoryData(response.data);
       } catch (err) {

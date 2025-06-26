@@ -7,10 +7,11 @@ const useDownload = () => {
   const downloadFile = async (
     matchType,
     metadataId,
-    format = 'csv'
+    format = 'csv',
+    institutionName
   ) => {
     try {
-        setLoadingDownload(true);
+      setLoadingDownload(true);
       const response = await axiosInstance.general.post(
         '/history',
         {
@@ -26,7 +27,7 @@ const useDownload = () => {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${matchType}_data_${metadataId}.${format}`;
+      a.download = `${matchType}_data_${institutionName}.${format}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

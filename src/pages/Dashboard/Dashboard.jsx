@@ -395,7 +395,7 @@ const Dashboard = () => {
                     <td className="px-6 py-4 font-medium">{item.institution_name}</td>
                     <td className="px-6 py-4">
                       <span
-                        className={`${statusColor[item.status_proses]} text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full`}
+                        className={`${statusColor[item.status_proses.toLowerCase()]} text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full`}
                       >
                         {toTitleCase(item.status_proses)}
                       </span>

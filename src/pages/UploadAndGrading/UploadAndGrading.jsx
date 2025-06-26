@@ -28,10 +28,11 @@ const UploadAndGrading = () => {
 
     const search = searchTerm.toLowerCase();
     const result = data.filter(item =>
-      item.institution_name?.toLowerCase().includes(search) ||
-      item.file_name?.toLowerCase().includes(search) ||
-      item.grade?.toLowerCase().includes(search)
+      (item.institution_name || '').toLowerCase().includes(search) ||
+      (item.file_name || '').toLowerCase().includes(search) ||
+      (item.grade || '').toLowerCase().includes(search)
     );
+
     setFilteredData(result);
   }, [searchTerm, data]);
 
@@ -62,8 +63,10 @@ const UploadAndGrading = () => {
 
     if (success) {
       setResponseOK(true);
+      console.log(success)
       refetch()
     } else {
+      console.log(success)
       ErrorPopOut()
     }
 
@@ -235,7 +238,7 @@ const UploadAndGrading = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredData.length === 0 ? (
+              {filteredData.length === 0 ||  filteredData.every(item => item.status_grading === null) ? (
                 <tr>
                   <td colSpan="6" className="text-center text-gray-500 py-6">
                     No data found
@@ -257,26 +260,27 @@ const UploadAndGrading = () => {
                   <td className="px-6 py-4">
                     <span
                       className={
-                        item.status_grading.toLowerCase() === "completed"
+                        item.status_grading?.toLowerCase() === "completed"
                           ? "bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full"
                           : "text-gray-700 text-xs font-medium px-2.5 py-0.5 rounded-full"
                       }
                     >
-                      {item.status_grading.toLowerCase() === "completed" ? "Grading Complete" : item.status_grading}
+                      {item.status_grading?.toLowerCase() === "completed" ? "Grading Complete" : item.status_grading}
                     </span>
 
                   </td>
                   <td className="px-6 py-4 text-center">
                     <button
-                      disabled={loadingSync || item.status_proses.toLowerCase() === ""}
+                      disabled={loadingSync || item.status_proses != null}
                       onClick={() => handleSync(item.id, item.grade)}
+                      // onClick={() => {console.log("Tombol diklik", item.id, item.grade); handleSync(item.id, item.grade)}}
                       className={`font-medium text-blue-600 ${
-                        loadingSync || item.status_proses.toLowerCase() === ""
+                        loadingSync || item.status_proses != null
                           ? "cursor-not-allowed text-slate-400 hover:no-underline"
                           : "hover:underline cursor-pointer"
                       }`}
                     >
-                      {loadingSync ? "Submitting..." : "Start Synchronization"}
+                     Start Synchronization
                     </button>
                   </td>
                 </tr>

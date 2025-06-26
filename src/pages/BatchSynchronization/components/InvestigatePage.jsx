@@ -1,34 +1,53 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import TableHeader from "./TableHeader";
 import { useLocation, useNavigate } from "react-router-dom";
 import { CircleCheck } from 'lucide-react';
 import { useEffect, useState } from "react";
 import DangerPopOut from "../../../components/PopOut/DangerPopOut";
 import { SuccessPopOut } from "../../../components/PopOut/SuccessPopOut";
+import useGetInvestigationData from "../hooks/useGetDataInvestigate";
 
 
 const InvestigatePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const {metadata_id, institutionName, statusGrade, data = [] } = location.state || {};
+  const { metadata_id, institutionName, statusGrade } = location.state || {};
+
+  // Hooks harus selalu dipanggil tanpa kondisi
   const [selectedIndexes, setSelectedIndexes] = useState([]);
   const [selectedMatches, setSelectedMatches] = useState([]);
   const [selectedMatchIndex, setSelectedMatchIndex] = useState(null);
+
+  const { data, isLoading, error } = useGetInvestigationData(metadata_id);
+
+  if (isLoading) {
+    return (
+      <div className='p-6 flex items-center justify-center min-h-[400px]'>
+        <div className='text-center'>
+          <Loader2 className='animate-spin w-8 h-8 mx-auto mb-4 text-blue-600' />
+          <p className='text-gray-600'>Loading investigation data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className='p-6'>
+        <div className='bg-red-50 border border-red-200 rounded-lg p-4'>
+          <h3 className='text-red-800 font-medium'>Error Loading Page</h3>
+          <p className='text-red-600 mt-1'>{error.message}</p>
+        </div>
+      </div>
+    );
+  }
+
   const selectedSource = selectedIndexes.length === 1 ? data[selectedIndexes[0]] : null;
   const similarityData = selectedSource?.similiarity_data || [];
   const isMatchButtonDisabled = selectedIndexes.length !== 1 || selectedMatchIndex === null;
 
-  // const { mutate: completeInvestigation, isLoading } = useCompleteInvestigation();
-
-
-
-  const shouldShowMatchReason =
-    selectedSource &&
-    (
-      similarityData.length === 1 ||
-      (similarityData.length > 1 && selectedMatchIndex != null)
-    );
+  const shouldShowMatchReason = selectedSource && (similarityData.length === 1 || (similarityData.length > 1 && selectedMatchIndex != null));
 
   useEffect(() => {
     if (data.length > 0 && selectedIndexes.length === 0) {
@@ -49,7 +68,6 @@ const InvestigatePage = () => {
   useEffect(() => {
     setSelectedMatchIndex(null);
   }, [selectedIndexes]);
-
 
 
   const summaryMap = {
@@ -132,7 +150,6 @@ const InvestigatePage = () => {
 
   console.log(result);
 };
-
 
 
   return (
