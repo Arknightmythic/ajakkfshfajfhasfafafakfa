@@ -298,13 +298,12 @@ const Dashboard = () => {
       <div className='p-6'>
         <div className='bg-red-50 border border-red-200 rounded-lg p-4'>
           <h3 className='text-red-800 font-medium'>Error Loading Page</h3>
-          <p className='text-red-600 mt-1'>{error.message}</p>
+          <p className='text-red-600 mt-1'>{error}</p>
         </div>
       </div>
     );
   }
 
-  // No data state
   if (!computedData) {
     return (
       <div className='p-6 flex items-center justify-center min-h-[400px]'>
