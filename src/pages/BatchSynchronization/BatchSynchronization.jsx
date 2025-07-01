@@ -67,7 +67,6 @@ const BatchSynchronization = () => {
       },
     });
 
-    console.log(id)
   };
 
   const showMatchedPage = (id, name, grade) => {
@@ -75,21 +74,9 @@ const BatchSynchronization = () => {
       state: {
         metadata_id: id,
         institutionName: name,
-        statusGrade: grade,
-        matchedSourceData: [
-          { nik: "1234123412341234", nama: "Kalimasada", tempat_lahir: "Pondok Indah Mall", tanggal_lahir: "09-09-1999", nama_ibu: "Putri" },
-          { nik: "9999888877776666", nama: "Timothy Ronald", tempat_lahir: "Pantai Indah Kapuk", tanggal_lahir: "09-09-1999", nama_ibu: "Liliana" },
-        ],
-        matchedDukcapilData: [
-          { nik: "1234123412341234", nama: "Kalimasada", tempat_lahir: "Pondok Indah Mall", tanggal_lahir: "09-09-1999", nama_ibu: "Putri" },
-          { nik: "9999888877776666", nama: "Timothy Ronald", tempat_lahir: "Pantai Indah Kapuk", tanggal_lahir: "09-09-1999", nama_ibu: "Liliana" },
-        ],
-        unmatchedSourceData: [
-          { nik: "6666666666666666", nama: "Wijaya", tempat_lahir: "Central Park", tanggal_lahir: "09-09-2000", nama_ibu: "Olivia" },
-        ],
+        statusGrade: grade
       }
     });
-    console.log("masuk")
   };
 
   const toTitleCase = (text) =>

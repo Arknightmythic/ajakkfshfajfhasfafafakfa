@@ -224,56 +224,27 @@ const Dashboard = () => {
     "awaiting action": "bg-red-100 text-red-800",
     "in progress": "bg-orange-100 text-orange-800",
     "completed": "bg-green-100 text-green-800",
-  };  const showInvestigationPage = (id, name, grade) => {
+  };  
+  
+  const showInvestigationPage = (id, name, grade) => {
     navigate('/batch-synchronization/investigate', {
       state: {
         metadata_id: id,
         institutionName: name,
-        statusGrade: grade,
-        data: [
-          {
-            institution_id: "12324",
-            name: "TIMOTHY",
-            birthdate: "09-09-1999",
-            similiarity_data: [
-              { nik: "digidaw", name: "TIMOTHY r", reason: "lorem ipsum" },
-              { nik: "digidaw3", name: "TMOMOTH", reason: "lorem ipsum2" },
-            ],
-          },
-          {
-            institution_id: "0000",
-            name: "KALIMASADA",
-            birthdate: "09-09-1999",
-            similiarity_data: [
-              { nik: "00000", name: "KALIMASADA", reason: "lorem ipsum" },
-              { nik: "000000", name: "KALISAMADA", reason: "lorem ipsum3" },
-            ],
-          },
-        ],
+        statusGrade: grade
       },
     });
 
-    console.log("masuk")
   };
 
-  const showMatchedPage = (name, grade) => {
+  const showMatchedPage = (id, name, grade) => {
     navigate('/batch-synchronization/preview', {
       state: {
+        metadata_id: id,
         institutionName: name,
-        matchedSourceData: [
-          { nik: "1234123412341234", nama: "Kalimasada", tempat_lahir: "Pondok Indah Mall", tanggal_lahir: "09-09-1999", nama_ibu: "Putri" },
-          { nik: "9999888877776666", nama: "Timothy Ronald", tempat_lahir: "Pantai Indah Kapuk", tanggal_lahir: "09-09-1999", nama_ibu: "Liliana" },
-        ],
-        matchedDukcapilData: [
-          { nik: "1234123412341234", nama: "Kalimasada", tempat_lahir: "Pondok Indah Mall", tanggal_lahir: "09-09-1999", nama_ibu: "Putri" },
-          { nik: "9999888877776666", nama: "Timothy Ronald", tempat_lahir: "Pantai Indah Kapuk", tanggal_lahir: "09-09-1999", nama_ibu: "Liliana" },
-        ],
-        unmatchedSourceData: [
-          { nik: "6666666666666666", nama: "Wijaya", tempat_lahir: "Central Park", tanggal_lahir: "09-09-2000", nama_ibu: "Olivia" },
-        ],
+        statusGrade: grade
       }
     });
-    console.log("masuk")
   };
 
   const toTitleCase = (text) =>
@@ -405,7 +376,7 @@ const Dashboard = () => {
                           <button
                             onClick={() => {
                               if (item.status_proses.toLowerCase() === "completed") {
-                                showMatchedPage(item.institution_name, item.grade);
+                                showMatchedPage(item.id, item.institution_name, item.grade);
                               }
                             }}
                             disabled={item.status_proses.toLowerCase() === "in progress"}
@@ -419,7 +390,7 @@ const Dashboard = () => {
                           </button>
                       ) : (
                         <button
-                          onClick={() => showInvestigationPage(item.metadata_id, item.institution_name, item.grade)}
+                          onClick={() => showInvestigationPage(item.id, item.institution_name, item.grade)}
                           className="font-medium text-blue-600 hover:underline cursor-pointer"
                         >
                           Investigate

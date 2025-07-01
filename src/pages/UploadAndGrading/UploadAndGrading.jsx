@@ -63,10 +63,8 @@ const UploadAndGrading = () => {
 
     if (success) {
       setResponseOK(true);
-      console.log(success)
       refetch()
     } else {
-      console.log(success)
       ErrorPopOut()
     }
 
@@ -273,7 +271,6 @@ const UploadAndGrading = () => {
                     <button
                       disabled={loadingSync || item.status_proses != null}
                       onClick={() => handleSync(item.id, item.grade)}
-                      // onClick={() => {console.log("Tombol diklik", item.id, item.grade); handleSync(item.id, item.grade)}}
                       className={`font-medium text-blue-600 ${
                         loadingSync || item.status_proses != null
                           ? "cursor-not-allowed text-slate-400 hover:no-underline"

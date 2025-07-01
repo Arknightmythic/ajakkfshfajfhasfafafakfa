@@ -3,7 +3,6 @@ import axiosInstance from "../../../axios/axiosInstance";
 
 const markAsComplete = async (metadata_id) => {
   const res = await axiosInstance.general.post(`/sync/mark-as-done/${metadata_id}`);
-  console.log(res)
   return res.data;
 };
 
