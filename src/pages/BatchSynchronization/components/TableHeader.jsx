@@ -1,6 +1,7 @@
 const TableHeader = ({
   data,
   type = "default",
+  grade,
   selectionType = "checkbox",
   selectedIndexes = [],
   selectedRadioIndex,
@@ -13,16 +14,39 @@ const TableHeader = ({
     return <p className="text-sm text-slate-500 px-2 py-3">No data available.</p>;
   }
 
+  const gradeColumnsMap = {
+    A: ["nik", "nama_lengkap", "tempat_lahir", "tanggal_lahir", "jenis_kelamin", "nama_ibu"],
+    B: ["nik", "nama_lengkap", "tempat_lahir", "tanggal_lahir", "jenis_kelamin", "nama_ibu"],
+    C: ["nama_lengkap", "tempat_lahir", "tanggal_lahir", "jenis_kelamin", "nama_ibu"],
+    D: ["nama_lengkap", "tempat_lahir", "tanggal_lahir", "jenis_kelamin", "nama_ibu"],
+    E: [
+      "nama_lengkap",
+      "tempat_lahir",
+      "tanggal_lahir",
+      "nama_ibu",
+      "provinsi",
+      "kabupaten",
+      "kecamatan",
+      "kelurahan",
+      "status_kematian",
+    ],
+  };
+
+  const rawKeys = Object.keys(data[0]);
+
   const headers =
-    type === "investigate"
-      ? Object.keys(data[0]).filter((k) => k !== "institution_id" && k !== "similiarity_data")
-      : Object.keys(data[0]);
+    grade
+      ? gradeColumnsMap[grade.toUpperCase()]?.filter((k) => rawKeys.includes(k)) ?? []
+      : type === "investigate"
+      ? rawKeys.filter((k) => k !== "institution_id" && k !== "similiarity_data")
+      : rawKeys.filter((k) => k !== "id" && k !== "nama");
+
 
   return (
     <table className="w-full text-sm text-left">
       <thead className="text-xs text-slate-500 uppercase bg-slate-50">
         <tr>
-          {type === "investigate" && (
+          {(selectionType === "checkbox" || selectionType === "radio") && (
             <th className="p-2 w-10 sticky left-0 bg-slate-50">
               {selectionType === "checkbox" && (
                 <input
@@ -50,7 +74,7 @@ const TableHeader = ({
 
           return (
             <tr key={idx} className="border-b border-slate-200 hover:bg-slate-100">
-              {type === "investigate" && (
+              {(selectionType === "checkbox" || selectionType === "radio") && (
                 <td className="p-2 w-10 sticky left-0 bg-white">
                   <input
                     type={selectionType}
@@ -66,7 +90,10 @@ const TableHeader = ({
                 </td>
               )}
               {headers.map((key) => (
-                <td key={key} className="px-6 py-2">
+                <td
+                  key={key}
+                  className={`px-6 py-2 ${key === "nama_lengkap" ? "font-semibold text-[#1E293B]" : ""}`}
+                >
                   {item[key]}
                 </td>
               ))}

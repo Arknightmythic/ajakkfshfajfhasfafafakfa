@@ -1,28 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import axiosInstance from '../../../axios/axiosInstance';
 
+const fetchSyncData = async () => {
+  const res = await axiosInstance.general.get('/sync');
+  return res.data.data;
+};
+
 const useGetData = () => {
-  const [data, setData]       = useState([]);    
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState(null);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const res = await axiosInstance.general.get('/sync');
-      setData(res.data.data);   
-    } catch (err) {
-      setError(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  return { data, loading, error, refetch: fetchData };
+  return useQuery({
+    queryKey: ['syncData'],
+    queryFn: fetchSyncData,
+    refetchInterval: 5000, 
+    refetchOnWindowFocus: true,
+  });
 };
 
 export default useGetData;

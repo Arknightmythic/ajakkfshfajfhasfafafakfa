@@ -67,13 +67,15 @@ const BatchSynchronization = () => {
       },
     });
 
-    console.log("masuk")
+    console.log(id)
   };
 
-  const showMatchedPage = (name, grade) => {
+  const showMatchedPage = (id, name, grade) => {
     navigate('/batch-synchronization/preview', {
       state: {
+        metadata_id: id,
         institutionName: name,
+        statusGrade: grade,
         matchedSourceData: [
           { nik: "1234123412341234", nama: "Kalimasada", tempat_lahir: "Pondok Indah Mall", tanggal_lahir: "09-09-1999", nama_ibu: "Putri" },
           { nik: "9999888877776666", nama: "Timothy Ronald", tempat_lahir: "Pantai Indah Kapuk", tanggal_lahir: "09-09-1999", nama_ibu: "Liliana" },
@@ -193,7 +195,7 @@ const BatchSynchronization = () => {
                           <button
                             onClick={() => {
                               if (item.status_proses.toLowerCase() === "completed") {
-                                showMatchedPage(item.institution_name, item.grade);
+                                showMatchedPage(item.id, item.institution_name, item.grade);
                               }
                             }}
                             disabled={item.status_proses.toLowerCase() === "in progress"}

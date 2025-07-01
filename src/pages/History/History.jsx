@@ -55,7 +55,6 @@ const History = () => {
       } else if (Array.isArray(historyData)) {
         dataArray = historyData;
       } else {
-        console.warn('Unable to extract array from historyData:', historyData);
         return [];
       }
     }
@@ -73,7 +72,7 @@ const History = () => {
 
     if (dateFilter && dateFilter.startDate && dateFilter.endDate) {
       filtered = filtered.filter((item) => {
-        const itemDate = new Date(item.last_update.split('T')[0]);
+        const itemDate = new Date(item.completed_date.split('T')[0]);
         const startDate = new Date(dateFilter.startDate);
         const endDate = new Date(dateFilter.endDate);
 
@@ -89,14 +88,14 @@ const History = () => {
         switch (statusFilter) {
           case 'matched':
             return (
-              (item.auto_matched || 0) > 0 || (item.manual_matched || 0) > 0
+              (item.auto_match_count || 0) > 0 || (item.manual_match_count || 0) > 0
             );
           case 'unmatched':
             return (item.unmatched || 0) > 0;
           case 'auto-matched':
-            return (item.auto_matched || 0) > 0;
+            return (item.auto_match_count || 0) > 0;
           case 'manual-matched':
-            return (item.manual_matched || 0) > 0;
+            return (item.manual_match_count || 0) > 0;
           default:
             return true;
         }
@@ -108,28 +107,28 @@ const History = () => {
 
       switch (sortBy) {
         case 'date':
-          aValue = new Date(a.last_update.split('T')[0]);
-          bValue = new Date(b.last_update.split('T')[0]);
+          aValue = new Date(a.completed_date.split('T')[0]);
+          bValue = new Date(b.completed_date.split('T')[0]);
           break;
         case 'institution_name':
           aValue = (a.institution_name || '').toLowerCase();
           bValue = (b.institution_name || '').toLowerCase();
           break;
         case 'automatched':
-          aValue = a.auto_matched || 0;
-          bValue = b.auto_matched || 0;
+          aValue = a.auto_match_count || 0;
+          bValue = b.auto_match_count || 0;
           break;
         case 'manualmatched':
-          aValue = a.manual_matched || 0;
-          bValue = b.manual_matched || 0;
+          aValue = a.manual_match_count || 0;
+          bValue = b.manual_match_count || 0;
           break;
         case 'unmatched':
-          aValue = a.unmatched || 0;
-          bValue = b.unmatched || 0;
+          aValue = a.unmatch_count || 0;
+          bValue = b.unmatch_count || 0;
           break;
-        case 'unmatched_percentage':
-          aValue = a.unmatched_percentage || 0;
-          bValue = b.unmatched_percentage || 0;
+        case 'unmatch_percentage':
+          aValue = a.unmatch_percentage || 0;
+          bValue = b.unmatch_percentage || 0;
         default:
           return 0;
       }
@@ -302,11 +301,11 @@ const History = () => {
                 </th>
                 <th
                   className='px-6 py-3'
-                  // onClick={() => handleSort('unmatched_percentage')}
+                  // onClick={() => handleSort('unmatch_percentage')}
                 >
                   <div className='flex items-center gap-1 whitespace-nowrap'>
                     % Unmatched
-                    {/* <span className='text-xs'>{getSortIcon('unmatched_percentage')}</span> */}
+                    {/* <span className='text-xs'>{getSortIcon('unmatch_percentage')}</span> */}
                   </div>
                 </th>
                 <th className='px-6 py-3 text-center'>Action</th>
@@ -327,19 +326,19 @@ const History = () => {
                       )}
                     </td>
                     <td className='px-6 py-4'>
-                      {item.last_update.split('T')[0]}
+                      {item.completed_date.split('T')[0]}
                     </td>
                     <td className='px-6 py-4 text-green-600'>
-                      {formatNumber(item.auto_matched)}
+                      {formatNumber(item.auto_match_count)}
                     </td>
                     <td className='px-6 py-4 text-blue-600'>
-                      {formatNumber(item.manual_matched)}
+                      {formatNumber(item.manual_match_count)}
                     </td>
                     <td className='px-6 py-4 text-red-600'>
-                      {formatNumber(item.unmatched)}
+                      {formatNumber(item.unmatch_count)}
                     </td>
                     <td className='px-6 py-4 text-red-600'>
-                      {formatNumber(item.unmatched_percentage)}%
+                      {formatNumber(item.unmatch_percentage)}%
                     </td>
                     <td className='flex px-6 py-4 text-center space-x-2'>
                       <button

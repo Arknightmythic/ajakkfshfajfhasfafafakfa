@@ -1,74 +1,107 @@
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, CircleCheck } from "lucide-react";
 import TableHeader from "./TableHeader";
 import { useLocation, useNavigate } from "react-router-dom";
-import { CircleCheck } from 'lucide-react';
 import { useEffect, useState } from "react";
 import DangerPopOut from "../../../components/PopOut/DangerPopOut";
 import { SuccessPopOut } from "../../../components/PopOut/SuccessPopOut";
 import useGetInvestigationData from "../hooks/useGetDataInvestigate";
-
+import usePostMatchData from "../hooks/usePostMatchData";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import axiosInstance from "../../../axios/axiosInstance";
 
 const InvestigatePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-
   const { metadata_id, institutionName, statusGrade } = location.state || {};
 
-  // Hooks harus selalu dipanggil tanpa kondisi
   const [selectedIndexes, setSelectedIndexes] = useState([]);
   const [selectedMatches, setSelectedMatches] = useState([]);
   const [selectedMatchIndex, setSelectedMatchIndex] = useState(null);
+  const [loadingOverlay, setLoadingOverlay] = useState(false);
 
   const { data, isLoading, error } = useGetInvestigationData(metadata_id);
-
-  if (isLoading) {
-    return (
-      <div className='p-6 flex items-center justify-center min-h-[400px]'>
-        <div className='text-center'>
-          <Loader2 className='animate-spin w-8 h-8 mx-auto mb-4 text-blue-600' />
-          <p className='text-gray-600'>Loading investigation data...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !data) {
-    return (
-      <div className='p-6'>
-        <div className='bg-red-50 border border-red-200 rounded-lg p-4'>
-          <h3 className='text-red-800 font-medium'>Error Loading Page</h3>
-          <p className='text-red-600 mt-1'>{error.message}</p>
-        </div>
-      </div>
-    );
-  }
-
-  const selectedSource = selectedIndexes.length === 1 ? data[selectedIndexes[0]] : null;
-  const similarityData = selectedSource?.similiarity_data || [];
-  const isMatchButtonDisabled = selectedIndexes.length !== 1 || selectedMatchIndex === null;
-
-  const shouldShowMatchReason = selectedSource && (similarityData.length === 1 || (similarityData.length > 1 && selectedMatchIndex != null));
+  const { mutateAsync: postMatchData } = usePostMatchData();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (data.length > 0 && selectedIndexes.length === 0) {
+    if (!data) return;
+
+    if (selectedIndexes.length === 0) {
       const allMatches = data.flatMap((d) => d.similiarity_data || []);
       setSelectedMatches(allMatches);
-    }
-  }, [data, selectedIndexes]);
-
-  useEffect(() => {
-    if (selectedIndexes.length > 0) {
+    } else {
       const filtered = selectedIndexes.flatMap(
         (i) => data[i]?.similiarity_data || []
       );
       setSelectedMatches(filtered);
     }
-  }, [selectedIndexes]);
+  }, [data, selectedIndexes]);
 
   useEffect(() => {
     setSelectedMatchIndex(null);
   }, [selectedIndexes]);
 
+  const selectedSource =
+    selectedIndexes.length === 1 ? data[selectedIndexes[0]] : null;
+  const similarityData = selectedSource?.similiarity_data || [];
+  const isMatchButtonDisabled =
+    selectedIndexes.length !== 1 ||
+    selectedMatchIndex === null ||
+    loadingOverlay;
+
+  const shouldShowMatchReason =
+    selectedSource &&
+    (similarityData.length === 1 ||
+      (similarityData.length > 1 && selectedMatchIndex != null));
+
+  const handleMarkAsMatch = async () => {
+    if (isMatchButtonDisabled || !selectedSource) return;
+    const selected = similarityData[selectedMatchIndex];
+
+    setLoadingOverlay(true);
+    try {
+      await postMatchData({
+        institution_id: selectedSource.id.toString(),
+        nik: selected.nik,
+        match_type: "match",
+      });
+
+      await queryClient.invalidateQueries(["investigation", metadata_id]);
+    } finally {
+      setLoadingOverlay(false);
+    }
+  };
+
+  const handleMarkAsUnmatch = async () => {
+    if (isMatchButtonDisabled || !selectedSource) return;
+    const selected = similarityData[selectedMatchIndex];
+
+    setLoadingOverlay(true);
+    try {
+      await postMatchData({
+        institution_id: selectedSource.id.toString(),
+        nik: selected.nik,
+        match_type: "unmatch",
+      });
+
+      await queryClient.invalidateQueries(["investigation", metadata_id]);
+    } finally {
+      setLoadingOverlay(false);
+    }
+  };
+
+  const { mutate: markAsDone, isPending } = useMutation({
+    mutationFn: async () => {
+      await axiosInstance.general.post(`/sync/mark-as-done/${metadata_id}`);
+    },
+    onSuccess: () => {
+      SuccessPopOut(
+        "Success",
+        "success",
+        "Investigation marked as completed successfully."
+      ).then(() => navigate("/batch-synchronization"));
+    },
+  });
 
   const summaryMap = {
     E: {
@@ -93,7 +126,6 @@ const InvestigatePage = () => {
       color: "yellow",
     },
   };
-
   const summary = summaryMap[statusGrade];
 
   const colorClassMap = {
@@ -116,110 +148,99 @@ const InvestigatePage = () => {
       desc: "text-yellow-700",
     },
   };
-
   const color = colorClassMap[summary?.color];
 
-  const handleMarkAsMatch = () => {
-    if (!selectedSource) return;
+  if (isLoading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+         {/* <p className='text-gray-600'>Loading...</p>  */}
+        <p className="font-medium animate-pulse">Loading data...</p>
+      </div>
+    );
+  }
 
-    const simData = selectedSource.similiarity_data || [];
-    const selected = simData[selectedMatchIndex];
-
-    const result =
-      {
-        institution_id: selectedSource.institution_id,
-        nik: selected.nik,
-        is_match: 1,
-      }
-
-    console.log(result);
-  };
-
-  const handleMarkAsUnmatch = () => {
-  if (!selectedSource) return;
-
-  const simData = selectedSource.similiarity_data || [];
-  const selected = simData[selectedMatchIndex];
-
-  const result =
-    {
-      institution_id: selectedSource.institution_id,
-      nik: selected.nik,
-      is_match: 0,
-    }
-
-  console.log(result);
-};
-
+  if (error || !data) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <h3 className="text-red-800 font-medium">Error Loading Data</h3>
+          <p className="text-red-600 mt-1">
+            {error?.message || "Data not found or an unknown error occurred."}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div >
+    <div className="relative">
+
       <div className="flex justify-between items-center mb-4">
         <button
-          onClick={() => navigate(-1)} 
+          onClick={() => navigate(-1)}
           className="flex items-center text-sm text-blue-600 hover:underline mb-4 cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4 mr-1" />
           Back to Batch List
         </button>
 
-        <button 
+        <button
           className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 text-sm flex items-center cursor-pointer"
-          onClick={() => 
+          onClick={() =>
             DangerPopOut(
               "Mark as Completed?",
-              `All source data that has not been marked as <b>Match</b> or <b>Unmatch</b> will automatically be marked as <b>Unmatch</b>. Are you sure you want to proceed?`, 
+              `All source data that has not been marked as <b>Match</b> or <b>Unmatch</b> will automatically be marked as <b>Unmatch</b>. Are you sure you want to proceed?`,
               "Yes, mark as completed",
-              // () => {
-              //   console.log(metadata_id);
-              //   // completeInvestigation(metadata_id);
-              // }
-              async () => {
-                // const success = await completeInvestigation(metadata_id);
-                // if (success) {
-                  SuccessPopOut("Success", "success", "Investigation marked as completed successfully.")
-                    .then(() => navigate("/batch-synchronization"));
-                // }
-              }
-            )}>
-              <CircleCheck className="w-4 h-4 mr-2"/>
-              Mark as Completed
+              () => markAsDone()
+            )
+          }
+        >
+          <CircleCheck className="w-4 h-4 mr-2" />
+          Mark as Completed
         </button>
       </div>
 
       <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
-        <h2 className="text-2xl font-bold">
-          Investigating: {institutionName}
-        </h2>
+        <h2 className="text-2xl font-bold">Investigating: {institutionName}</h2>
       </div>
 
       {summary && (
-        <div className={`${color?.bg} border-l-4 ${color?.border} p-4 rounded-r-lg mb-6`}>
+        <div
+          className={`${color?.bg} border-l-4 ${color?.border} p-4 rounded-r-lg mb-6`}
+        >
           <h4 className={`font-bold ${color?.title}`}>{summary.title}</h4>
           <p className={`text-sm mt-1 ${color?.desc}`}>{summary.description}</p>
         </div>
       )}
 
+      {(loadingOverlay || isPending) && (
+        <div className="absolute inset-0 bg-opacity-100 z-50 flex items-center justify-center mt-60">
+          <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+        </div>
+      )}
+
       <div className="bg-white p-6 rounded-xl shadow-sm">
-        <div className="mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h3 className="font-semibold text-lg mb-2">Source Data (from Institution)</h3>
-              <div className="border border-slate-300 rounded-lg overflow-hidden">
-                <div className="overflow-x-auto max-h-[40vh]">
-                  <TableHeader
-                    data={data}
-                    type="investigate"
-                    selectionType="radio"
-                    selectedRadioIndex={selectedIndexes[0] ?? null}
-                    onRadioChange={(idx) => setSelectedIndexes([idx])}
-                    radioGroupName="source"
-                  />
-
-                </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h3 className="font-semibold text-lg mb-2">
+              Source Data (from Institution)
+            </h3>
+            <div className="border border-slate-300 rounded-lg overflow-hidden">
+              <div className="overflow-x-auto max-h-[40vh]">
+                <TableHeader
+                  // data={data}
+                  data={Array.isArray(data) ? data : []}
+                  type="investigate"
+                  selectionType="radio"
+                  grade={statusGrade}
+                  selectedRadioIndex={selectedIndexes[0] ?? null}
+                  onRadioChange={(idx) => setSelectedIndexes([idx])}
+                  radioGroupName="source"
+                />
               </div>
-
-              <div className="mt-4 text-right">
+            </div>
+            <div className="mt-4 text-right">
               <button
                 className={`px-4 py-2 rounded-md text-sm ${
                   isMatchButtonDisabled
@@ -231,38 +252,38 @@ const InvestigatePage = () => {
               >
                 Mark as Unmatch
               </button>
-
             </div>
+          </div>
 
-            </div>
-
-            <div>
-              <h3 className="font-semibold text-lg mb-2">Potential Matches (from DUKCAPIL)</h3>
-              <div className="border border-slate-300 rounded-lg overflow-hidden">
-                <div className="overflow-x-auto max-h-[40vh]">
-                  <TableHeader
-                    data={selectedMatches.map(({ reason, ...rest }) => rest)}
-                    type="investigate"
-                    selectionType="radio"
-                    selectedRadioIndex={selectedMatchIndex}
-                    onRadioChange={setSelectedMatchIndex}
-                    radioGroupName="matches"
-                  />
-                </div>
+          {/* Potential Matches */}
+          <div>
+            <h3 className="font-semibold text-lg mb-2">
+              Potential Matches (from DUKCAPIL)
+            </h3>
+            <div className="border border-slate-300 rounded-lg overflow-hidden">
+              <div className="overflow-x-auto max-h-[40vh]">
+                <TableHeader
+                  // data={selectedMatches.map(({ reason, ...rest }) => rest)}
+                  data={Array.isArray(selectedMatches) ? selectedMatches.map(({ reason, ...rest }) => rest) : []}
+                  type="matches"
+                  selectionType="radio"
+                  selectedRadioIndex={selectedMatchIndex}
+                  onRadioChange={setSelectedMatchIndex}
+                  radioGroupName="matches"
+                />
               </div>
-              {shouldShowMatchReason && (
-                <div className="mt-4 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg">
-                  <h4 className="font-semibold text-blue-800">Match Reason</h4>
-                  <p className="text-sm text-slate-700 mt-1">
-                    {
-                      selectedMatchIndex != null
-                        ? similarityData[selectedMatchIndex]?.reason
-                        : similarityData[0]?.reason
-                    }
-                  </p>
-                </div>
-              )}
-              <div className="mt-4 text-right">
+            </div>
+            {shouldShowMatchReason && (
+              <div className="mt-4 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg">
+                <h4 className="font-semibold text-blue-800">Match Reason</h4>
+                <p className="text-sm text-slate-700 mt-1">
+                  {selectedMatchIndex != null
+                    ? similarityData[selectedMatchIndex]?.reason
+                    : similarityData[0]?.reason}
+                </p>
+              </div>
+            )}
+            <div className="mt-4 text-right">
               <button
                 className={`px-4 py-2 rounded-md text-sm ${
                   isMatchButtonDisabled
@@ -274,13 +295,9 @@ const InvestigatePage = () => {
               >
                 Mark as Match
               </button>
-
-            </div>
-
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );

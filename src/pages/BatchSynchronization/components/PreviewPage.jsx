@@ -1,17 +1,41 @@
 import { ArrowLeft } from "lucide-react";
 import TableHeader from "./TableHeader";
 import { useLocation, useNavigate } from "react-router-dom";
+import useGetPreviewData from "../hooks/useGetDataPreview";
 
 const PreviewPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
   const {
+    metadata_id,
     institutionName = "State Civil Service Agency",
-    matchedSourceData = [],
-    matchedDukcapilData = [],
-    unmatchedSourceData = [],
+    statusGrade,
+
   } = location.state || {};
+  const { data, isLoading, error } = useGetPreviewData(metadata_id);
+  console.log("line 18",metadata_id)
+
+    if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <p className="font-medium animate-pulse">Loading preview data...</p>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="text-center text-red-500 font-medium">
+        Failed to load preview data.
+      </div>
+    );
+  }
+
+  const matchedInstitution = data?.match?.map((item) => item.institution) ?? [];
+  const matchedMaster = data?.match?.map((item) => item.master).filter(Boolean) ?? [];
+  const unmatchedInstitution = data?.unmatch?.map((item) => item.institution) ?? [];
+
   return (
     <div >
       <button
@@ -36,7 +60,12 @@ const PreviewPage = () => {
               <h4 className="font-medium text-slate-600 mb-2">Source Data (from Institution)</h4>
               <div className="border border-slate-300 rounded-lg overflow-hidden">
                 <div className="overflow-x-auto max-h-[40vh]">
-                  <TableHeader data={matchedSourceData} />
+                  <TableHeader
+                    data={matchedInstitution}
+                    type="preview"
+                    selectionType="none"
+                    grade={statusGrade}
+                  />
                 </div>
               </div>
             </div>
@@ -45,7 +74,11 @@ const PreviewPage = () => {
               <h4 className="font-medium text-slate-600 mb-2">Matched Data (from DUKCAPIL)</h4>
               <div className="border border-slate-300 rounded-lg overflow-hidden">
                 <div className="overflow-x-auto max-h-[40vh]">
-                  <TableHeader data={matchedDukcapilData} />
+                  <TableHeader
+                    data={matchedMaster}
+                    type="preview"
+                    selectionType="none"
+                  />
                 </div>
               </div>
             </div>
@@ -56,7 +89,12 @@ const PreviewPage = () => {
           <h3 className="font-semibold text-lg mb-2">Unmatched Records</h3>
           <div className="border border-slate-300 rounded-lg overflow-hidden">
             <div className="overflow-x-auto max-h-[40vh]">
-              <TableHeader data={unmatchedSourceData} />
+              <TableHeader
+                data={unmatchedInstitution}
+                type="preview"
+                selectionType="none"
+                grade={statusGrade}
+              />
             </div>
           </div>
         </div>
