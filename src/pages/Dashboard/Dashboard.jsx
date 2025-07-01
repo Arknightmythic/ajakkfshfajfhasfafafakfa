@@ -49,18 +49,16 @@ const Dashboard = () => {
 
     const totalBatches = raw.length;
     const completed = raw.filter(
-      (r) => String(r.status_grading).toLowerCase() === 'completed'
+      (r) => String(r.status_proses).toLowerCase() === 'completed'
     ).length;
 
-    const failed = raw.filter(
-      (r) => String(r.status_grading).toLowerCase() === 'failed'
+    const awaitingAction = raw.filter(
+      (r) => String(r.status_proses).toLowerCase() === 'awaiting action'
     ).length;
 
     const inProgress = raw.filter(
       (r) =>
-        r.status_grading?.toLowerCase() === 'in_progress' ||
-        r.status_grading?.toLowerCase() === 'processing'
-    ).length;
+        r.status_proses?.toLowerCase() === 'in progress').length;
 
     raw.forEach((item) => {
       const grade = item.grade?.toUpperCase();
@@ -114,9 +112,8 @@ const Dashboard = () => {
     return {
       totalBatches,
       completed,
-      failed,
       inProgress,
-      awaitingAction: 0, 
+      awaitingAction, 
       gradeDistribution,
       recentBatches: recentBatches.map((item) => ({
         id: item.id,
@@ -135,6 +132,7 @@ const Dashboard = () => {
         totalBatches > 0 ? ((completed / totalBatches) * 100).toFixed(1) : 0,
     };
   }, [dashboardData]);
+
 
   const isGradeDataEmpty =
     !computedData?.gradeDistribution ||
@@ -170,6 +168,7 @@ const Dashboard = () => {
                   text: 'Data Count',
                 },
                 ticks: {
+                  precision: 0,
                   callback: (value) => {
                     if (value >= 1000000) {
                       return `${(value / 1000000).toFixed(1)}M`;

@@ -63,7 +63,7 @@ const Layout = () => {
             }}
           >
             <iframe
-              src="http://localhost/chatbot/GJQPX1Y9DoUz4qK0"
+              src="http://172.16.12.98/chatbot/vKSu0aksBHFR77BX"
               style={{
                 width: '100%',
                 height: '100%',
