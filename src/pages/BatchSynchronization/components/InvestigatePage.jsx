@@ -22,6 +22,46 @@ const InvestigatePage = () => {
   const { data, isLoading, error } = useGetInvestigationData(metadata_id);
   const { mutateAsync: postMatchData } = usePostMatchData(metadata_id);
 
+  const [sortedData, setSortedData] = useState([]);
+
+  useEffect(() => {
+    if (!data) return;
+
+    const hasReasonInSimilarity = (entry) =>
+      (entry.similiarity_data || []).some((item) => !!item.reason);
+
+    const sorted = [...data].sort((a, b) => {
+      const aHas = hasReasonInSimilarity(a);
+      const bHas = hasReasonInSimilarity(b);
+      return bHas - aHas;
+    });
+
+    setSortedData(sorted);
+  }, [data]);
+
+  useEffect(() => {
+  if (!sortedData) return;
+
+  const sortByReason = (a, b) => {
+    const aHasReason = !!a.reason;
+    const bHasReason = !!b.reason;
+    return bHasReason - aHasReason;
+  };
+
+  if (selectedIndexes.length === 0) {
+    const allMatches = sortedData.flatMap((d) => d.similiarity_data || []);
+    const sortedMatches = [...allMatches].sort(sortByReason);
+    setSelectedMatches(sortedMatches);
+  } else {
+    const filtered = selectedIndexes.flatMap(
+      (i) => sortedData[i]?.similiarity_data || []
+    );
+    const sortedFiltered = [...filtered].sort(sortByReason);
+    setSelectedMatches(sortedFiltered);
+  }
+}, [sortedData, selectedIndexes]);
+
+
   useEffect(() => {
     if (!data) return;
 
@@ -41,7 +81,7 @@ const InvestigatePage = () => {
   }, [selectedIndexes]);
 
   const selectedSource =
-    selectedIndexes.length === 1 ? data[selectedIndexes[0]] : null;
+    selectedIndexes.length === 1 ? sortedData[selectedIndexes[0]] : null;
   const similarityData = selectedSource?.similiarity_data || [];
   const isMatchButtonDisabled =
     selectedIndexes.length !== 1 ||
@@ -223,7 +263,7 @@ const InvestigatePage = () => {
               <div className="overflow-x-auto max-h-[40vh]">
                 <TableHeader
                   // data={data}
-                  data={Array.isArray(data) ? data : []}
+                  data={Array.isArray(sortedData) ? sortedData : []}
                   type="investigate"
                   selectionType="radio"
                   grade={statusGrade}
