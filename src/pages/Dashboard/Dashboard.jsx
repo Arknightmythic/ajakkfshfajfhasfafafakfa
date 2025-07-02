@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Layers } from 'lucide-react';
+import { Hourglass, Layers } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import { FileCog } from 'lucide-react';
 import { CheckCheck } from 'lucide-react';
@@ -27,7 +27,7 @@ const Dashboard = () => {
 
     const filtered = data.filter((item) => {
       const itemDateStr = item.inserted_date?.slice(0, 10);
-      return itemDateStr === todayStr;
+      return item.status_proses !== null && itemDateStr === todayStr;
     });
 
     setFilteredData(filtered);
@@ -48,6 +48,7 @@ const Dashboard = () => {
     };
 
     const totalBatches = raw.length;
+    console.log("line 51", raw)
     const completed = raw.filter(
       (r) => String(r.status_proses).toLowerCase() === 'completed'
     ).length;
@@ -59,6 +60,8 @@ const Dashboard = () => {
     const inProgress = raw.filter(
       (r) =>
         r.status_proses?.toLowerCase() === 'in progress').length;
+    
+    const pending = raw.filter(r => r.status_proses === null).length;
 
     raw.forEach((item) => {
       const grade = item.grade?.toUpperCase();
@@ -80,11 +83,11 @@ const Dashboard = () => {
             gradeCounts['Grade E'],
           ],
           backgroundColor: [
-            '#BBF7D0', // Darker Green
-            '#FDE047', // Darker Yellow
-            '#FDBA74', // Darker Orange
-            '#F87171', // Darker Red
-            '#FB7185', // Darker Pink/Purple
+            '#86efac', 
+            '#fde047', 
+            '#fdba74', 
+            '#d8b4fe', 
+            '#fca5a5', 
           ],
         },
       ],
@@ -102,7 +105,11 @@ const Dashboard = () => {
 
     const today = new Date().toISOString().split('T')[0]; 
     const recentBatches = raw
-      .filter((item) => item.inserted_date?.startsWith(today))
+      .filter(
+        (item) =>
+          item.status_proses !== null &&
+          item.inserted_date?.startsWith(today)
+      )
       .sort(
         (a, b) =>
           new Date(b.inserted_date).getTime() -
@@ -113,7 +120,8 @@ const Dashboard = () => {
       totalBatches,
       completed,
       inProgress,
-      awaitingAction, 
+      awaitingAction,
+      pending, 
       gradeDistribution,
       recentBatches: recentBatches.map((item) => ({
         id: item.id,
@@ -287,11 +295,11 @@ const Dashboard = () => {
   return (
     <div className='p-6'>
       {/* Stats Cards */}
-      <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8'>
+      <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-6 mb-8'>
         <div className='bg-white p-6 rounded-xl shadow-sm flex items-center justify-between'>
           <div>
             <p className='text-sm font-medium text-slate-500'>
-              Total Batches In
+              Total
             </p>
             <p className='text-3xl font-bold'>{computedData.totalBatches}</p>
           </div>
@@ -326,6 +334,15 @@ const Dashboard = () => {
           </div>
           <div className='bg-green-100 p-3 rounded-full'>
             <CheckCheck className='text-green-600 w-6 h-6' />
+          </div>
+        </div>
+        <div className='bg-white p-6 rounded-xl shadow-sm flex items-center justify-between'>
+          <div>
+            <p className='text-sm font-medium text-slate-500'>Pending</p>
+            <p className='text-3xl font-bold'>{computedData.pending}</p>
+          </div>
+          <div className='bg-purple-100 p-3 rounded-full'>
+            <Hourglass className='text-purple-600 w-6 h-6' />
           </div>
         </div>
       </div>

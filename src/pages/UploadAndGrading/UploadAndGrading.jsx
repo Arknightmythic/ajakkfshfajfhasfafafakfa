@@ -76,18 +76,28 @@ const UploadAndGrading = () => {
     setSelectedFile(null);
   };
 
-  const { syncByGrade, loadingSync, errorSync } = useSync();
+  const { mutateAsync: syncByGrade, isPending, isError, error:syncError } = useSync();
+
   const handleSync = async (id, grade) => {
-    SuccessPopOut("Synchronizing...", "info", "You can go to Batch Synchronization menu to check the the progress.")
-    const result = await syncByGrade(id, grade);
-    if (result) {
-      console.log('Success:', result);
-      refetch()
-    } else {
-      console.error('Failed:', error);
-      ErrorPopOut()
+    SuccessPopOut(
+      "Synchronizing...",
+      "info",
+      "You can go to Batch Synchronization menu to check the the progress."
+    );
+
+    try {
+      const result = await syncByGrade({ id, grade });
+      if (result) {
+        console.log("Success:", result);
+      } else {
+        ErrorPopOut();
+      }
+    } catch (err) {
+      console.error("Failed:", err);
+      ErrorPopOut();
     }
   };
+
 
   if (loading) {
     return (
@@ -269,10 +279,10 @@ const UploadAndGrading = () => {
                   </td>
                   <td className="px-6 py-4 text-center">
                     <button
-                      disabled={loadingSync || item.status_proses != null}
+                      disabled={isPending || item.status_proses != null}
                       onClick={() => handleSync(item.id, item.grade)}
                       className={`font-medium text-blue-600 ${
-                        loadingSync || item.status_proses != null
+                        isPending || item.status_proses != null
                           ? "cursor-not-allowed text-slate-400 hover:no-underline"
                           : "hover:underline cursor-pointer"
                       }`}

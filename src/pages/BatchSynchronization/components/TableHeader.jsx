@@ -15,10 +15,10 @@ const TableHeader = ({
   }
 
   const gradeColumnsMap = {
-    A: ["nik", "nama_lengkap", "tempat_lahir", "tanggal_lahir", "jenis_kelamin", "nama_ibu"],
-    B: ["nik", "nama_lengkap", "tempat_lahir", "tanggal_lahir", "jenis_kelamin", "nama_ibu"],
-    C: ["nama_lengkap", "tempat_lahir", "tanggal_lahir", "jenis_kelamin", "nama_ibu"],
-    D: ["nama_lengkap", "tempat_lahir", "tanggal_lahir", "jenis_kelamin", "nama_ibu"],
+    A: ["nik", "nama_lengkap", "tempat_lahir", "tanggal_lahir", "jenis_kelamin", "nama_ibu", "match_score"],
+    B: ["nik", "nama_lengkap", "tempat_lahir", "tanggal_lahir", "jenis_kelamin", "nama_ibu", "match_score"],
+    C: ["nama_lengkap", "tempat_lahir", "tanggal_lahir", "jenis_kelamin", "nama_ibu", "match_score"],
+    D: ["nama_lengkap", "tempat_lahir", "tanggal_lahir", "jenis_kelamin", "nama_ibu", "match_score"],
     E: [
       "nama_lengkap",
       "tempat_lahir",
@@ -29,6 +29,7 @@ const TableHeader = ({
       "kecamatan",
       "kelurahan",
       "status_kematian",
+      "match_score"
     ],
   };
 
@@ -91,11 +92,13 @@ const TableHeader = ({
               )}
               {headers.map((key) => (
                 <td
-                  key={key}
-                  className={`px-6 py-2 ${key === "nama_lengkap" ? "font-semibold text-[#1E293B]" : ""}`}
-                >
-                  {item[key]}
-                </td>
+                key={key}
+                className={`px-6 py-2 ${key === "nama_lengkap" ? "font-semibold text-[#1E293B]" : ""}`}
+              >
+                {key === "match_score"
+                  ? `${(item[key] * 100).toFixed(2)}%`
+                  : item[key]}
+              </td>
               ))}
             </tr>
           );

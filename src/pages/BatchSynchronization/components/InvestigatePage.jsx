@@ -6,7 +6,7 @@ import DangerPopOut from "../../../components/PopOut/DangerPopOut";
 import { SuccessPopOut } from "../../../components/PopOut/SuccessPopOut";
 import useGetInvestigationData from "../hooks/useGetDataInvestigate";
 import usePostMatchData from "../hooks/usePostMatchData";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import axiosInstance from "../../../axios/axiosInstance";
 
 const InvestigatePage = () => {
@@ -20,8 +20,7 @@ const InvestigatePage = () => {
   const [loadingOverlay, setLoadingOverlay] = useState(false);
 
   const { data, isLoading, error } = useGetInvestigationData(metadata_id);
-  const { mutateAsync: postMatchData } = usePostMatchData();
-  const queryClient = useQueryClient();
+  const { mutateAsync: postMatchData } = usePostMatchData(metadata_id);
 
   useEffect(() => {
     if (!data) return;
@@ -65,8 +64,6 @@ const InvestigatePage = () => {
         nik: selected.nik,
         match_type: "match",
       });
-
-      await queryClient.invalidateQueries(["investigation", metadata_id]);
     } finally {
       setLoadingOverlay(false);
     }
@@ -83,12 +80,11 @@ const InvestigatePage = () => {
         nik: selected.nik,
         match_type: "unmatch",
       });
-
-      await queryClient.invalidateQueries(["investigation", metadata_id]);
     } finally {
       setLoadingOverlay(false);
     }
   };
+
 
   const { mutate: markAsDone, isPending } = useMutation({
     mutationFn: async () => {
@@ -153,8 +149,6 @@ const InvestigatePage = () => {
   if (isLoading) {
     return (
       <div className="p-6 flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
-         {/* <p className='text-gray-600'>Loading...</p>  */}
         <p className="font-medium animate-pulse">Loading data...</p>
       </div>
     );
@@ -175,6 +169,11 @@ const InvestigatePage = () => {
 
   return (
     <div className="relative">
+      {(loadingOverlay || isPending) && (
+        <div className="absolute inset-0 bg-white/10 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
+          <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+        </div>
+      )}
 
       <div className="flex justify-between items-center mb-4">
         <button
@@ -196,8 +195,8 @@ const InvestigatePage = () => {
             )
           }
         >
-          <CircleCheck className="w-4 h-4 mr-2" />
-          Mark as Completed
+          {isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CircleCheck className="w-4 h-4 mr-2" />}
+          {isPending ? 'Processing...' : 'Mark as Completed'}
         </button>
       </div>
 
@@ -211,12 +210,6 @@ const InvestigatePage = () => {
         >
           <h4 className={`font-bold ${color?.title}`}>{summary.title}</h4>
           <p className={`text-sm mt-1 ${color?.desc}`}>{summary.description}</p>
-        </div>
-      )}
-
-      {(loadingOverlay || isPending) && (
-        <div className="absolute inset-0 bg-opacity-100 z-50 flex items-center justify-center mt-60">
-          <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
         </div>
       )}
 
