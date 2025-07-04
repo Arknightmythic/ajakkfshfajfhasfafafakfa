@@ -146,74 +146,76 @@ const BatchSynchronization = () => {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="text-xs text-slate-500 uppercase bg-slate-50">
-                <tr>
-                  <th className="px-6 py-3">Ministry/Institution</th>
-                  <th className="px-6 py-3">Total Records</th>
-                  <th className="px-6 py-3">Grade</th>
-                  <th className="px-6 py-3">Status</th>
-                  <th className="px-6 py-3 text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[...filteredData]
-                .sort((a, b) => new Date(b.inserted_date) - new Date(a.inserted_date))
-                .map((item, idx) => (
-                  <tr key={idx}>
-                    <td className="px-6 py-4 font-medium">{item.institution_name}</td>
-                    <td className="px-6 py-4">{item.total_records}</td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`${gradeColor[item.grade]} font-bold text-xs px-2 py-1 rounded`}
-                      >
-                        Grade {item.grade}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`${statusColor[item.status_proses.toLowerCase()]} text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full`}
-                      >
-                        {toTitleCase(item.status_proses)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      {item.status_proses.toLowerCase() === "completed" || item.status_proses.toLowerCase() === "in progress" ? (
-                          <button
-                            onClick={() => {
-                              if (item.status_proses.toLowerCase() === "completed") {
-                                showMatchedPage(item.id, item.institution_name, item.grade);
-                              }
-                            }}
-                            disabled={item.status_proses.toLowerCase() === "in progress"}
-                            className={`font-medium ${
-                              item.status_proses.toLowerCase() === "in progress"
-                                ? "text-gray-400 cursor-not-allowed"
-                                : "text-blue-600 hover:underline cursor-pointer"
-                            }`}
-                          >
-                            Preview
-                          </button>
-                      ) : (
-                        <button
-                          onClick={() => showInvestigationPage(item.id, item.institution_name, item.grade)}
-                          className="font-medium text-blue-600 hover:underline cursor-pointer"
-                        >
-                          Investigate
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-                {filteredData.length === 0 && (
+            <div className="max-h-[500px] overflow-y-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="text-xs text-slate-500 uppercase bg-slate-50">
                   <tr>
-                    <td colSpan={5} className="px-6 py-4 text-center text-slate-500">
-                      No data found.
-                    </td>
+                    <th className="px-6 py-3">Ministry/Institution</th>
+                    <th className="px-6 py-3">Total Records</th>
+                    <th className="px-6 py-3">Grade</th>
+                    <th className="px-6 py-3">Status</th>
+                    <th className="px-6 py-3 text-center">Action</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {[...filteredData]
+                  .sort((a, b) => new Date(b.inserted_date) - new Date(a.inserted_date))
+                  .map((item, idx) => (
+                    <tr key={idx}>
+                      <td className="px-6 py-4 font-medium">{item.institution_name}</td>
+                      <td className="px-6 py-4">{item.total_records}</td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`${gradeColor[item.grade]} font-bold text-xs px-2 py-1 rounded`}
+                        >
+                          Grade {item.grade}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`${statusColor[item.status_proses.toLowerCase()]} text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full`}
+                        >
+                          {toTitleCase(item.status_proses)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        {item.status_proses.toLowerCase() === "completed" || item.status_proses.toLowerCase() === "in progress" ? (
+                            <button
+                              onClick={() => {
+                                if (item.status_proses.toLowerCase() === "completed") {
+                                  showMatchedPage(item.id, item.institution_name, item.grade);
+                                }
+                              }}
+                              disabled={item.status_proses.toLowerCase() === "in progress"}
+                              className={`font-medium ${
+                                item.status_proses.toLowerCase() === "in progress"
+                                  ? "text-gray-400 cursor-not-allowed"
+                                  : "text-blue-600 hover:underline cursor-pointer"
+                              }`}
+                            >
+                              Preview
+                            </button>
+                        ) : (
+                          <button
+                            onClick={() => showInvestigationPage(item.id, item.institution_name, item.grade)}
+                            className="font-medium text-blue-600 hover:underline cursor-pointer"
+                          >
+                            Investigate
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredData.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-4 text-center text-slate-500">
+                        No data found.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

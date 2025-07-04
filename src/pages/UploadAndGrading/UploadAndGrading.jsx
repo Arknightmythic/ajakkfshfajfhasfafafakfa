@@ -234,66 +234,68 @@ const UploadAndGrading = () => {
             </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="text-xs text-slate-500 uppercase bg-slate-50">
-              <tr>
-                <th className="px-6 py-3">Ministry / Institution</th>
-                <th className="px-6 py-3">File</th>
-                <th className="px-6 py-3">Total Records</th>
-                <th className="px-6 py-3">Dataset Grade</th>
-                <th className="px-6 py-3">Status</th>
-                <th className="px-6 py-3 text-center">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredData.length === 0 ||  filteredData.every(item => item.status_grading === null) ? (
+          <div className="max-h-[500px] overflow-y-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs text-slate-500 uppercase bg-slate-50">
                 <tr>
-                  <td colSpan="6" className="text-center text-gray-500 py-6">
-                    No data found
-                  </td>
+                  <th className="px-6 py-3">Ministry / Institution</th>
+                  <th className="px-6 py-3">File</th>
+                  <th className="px-6 py-3">Total Records</th>
+                  <th className="px-6 py-3">Dataset Grade</th>
+                  <th className="px-6 py-3">Status</th>
+                  <th className="px-6 py-3 text-center">Action</th>
                 </tr>
-              ): (
-                [...filteredData]
-                .sort((a, b) => new Date(b.inserted_date) - new Date(a.inserted_date))
-                .map((item, index) => (
-                <tr key={index} className="bg-white border-b border-slate-200 hover:bg-gray-50">
-                  <td className="px-6 py-4">{item.institution_name}</td>
-                  <td className="px-6 py-4">{item.file_name}</td>
-                  <td className="px-6 py-4">{item.total_records}</td>
-                  <td className="px-6 py-4">
-                    <span className={`font-bold text-xs px-2 py-1 rounded ${getGradeClass(item.grade)}`}>
-                      Grade {item.grade}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={
-                        item.status_grading?.toLowerCase() === "completed"
-                          ? "bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full"
-                          : "text-gray-700 text-xs font-medium px-2.5 py-0.5 rounded-full"
-                      }
-                    >
-                      {item.status_grading?.toLowerCase() === "completed" ? "Grading Complete" : item.status_grading}
-                    </span>
+              </thead>
+              <tbody>
+                {filteredData.length === 0 ||  filteredData.every(item => item.status_grading === null) ? (
+                  <tr>
+                    <td colSpan="6" className="text-center text-gray-500 py-6">
+                      No data found
+                    </td>
+                  </tr>
+                ): (
+                  [...filteredData]
+                  .sort((a, b) => new Date(b.inserted_date) - new Date(a.inserted_date))
+                  .map((item, index) => (
+                  <tr key={index} className="bg-white border-b border-slate-200 hover:bg-gray-50">
+                    <td className="px-6 py-4">{item.institution_name}</td>
+                    <td className="px-6 py-4">{item.file_name}</td>
+                    <td className="px-6 py-4">{item.total_records}</td>
+                    <td className="px-6 py-4">
+                      <span className={`font-bold text-xs px-2 py-1 rounded ${getGradeClass(item.grade)}`}>
+                        Grade {item.grade}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={
+                          item.status_grading?.toLowerCase() === "completed"
+                            ? "bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full"
+                            : "text-gray-700 text-xs font-medium px-2.5 py-0.5 rounded-full"
+                        }
+                      >
+                        {item.status_grading?.toLowerCase() === "completed" ? "Grading Complete" : item.status_grading}
+                      </span>
 
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <button
-                      disabled={isPending || item.status_proses != null}
-                      onClick={() => handleSync(item.id, item.grade)}
-                      className={`font-medium text-blue-600 ${
-                        isPending || item.status_proses != null
-                          ? "cursor-not-allowed text-slate-400 hover:no-underline"
-                          : "hover:underline cursor-pointer"
-                      }`}
-                    >
-                     Start Synchronization
-                    </button>
-                  </td>
-                </tr>
-              )))}
-          </tbody>
-          </table>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <button
+                        disabled={isPending || item.status_proses != null}
+                        onClick={() => handleSync(item.id, item.grade)}
+                        className={`font-medium text-blue-600 ${
+                          isPending || item.status_proses != null
+                            ? "cursor-not-allowed text-slate-400 hover:no-underline"
+                            : "hover:underline cursor-pointer"
+                        }`}
+                      >
+                      Start Synchronization
+                      </button>
+                    </td>
+                  </tr>
+                )))}
+            </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

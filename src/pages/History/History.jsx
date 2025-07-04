@@ -245,139 +245,141 @@ const History = () => {
         </div>
 
         <div className='overflow-x-auto'>
-          <table className='w-full text-sm text-left'>
-            <thead className='text-xs text-slate-500 uppercase bg-slate-50'>
-              <tr>
-                <th
-                  className='px-6 py-3'
-                  // onClick={() => handleSort('institution_name')}
-                >
-                  <div className='flex items-center gap-1'>
-                    Ministry/Institution
-                    {/* <span className='text-xs'>
-                      {getSortIcon('institution_name')}
-                    </span> */}
-                  </div>
-                </th>
-                <th
-                  className='px-6 py-3'
-                  // onClick={() => handleSort('date')}
-                >
-                  <div className='flex items-center gap-1'>
-                    Completion Date
-                    {/* <span className='text-xs'>{getSortIcon('date')}</span> */}
-                  </div>
-                </th>
-                <th
-                  className='px-6 py-3'
-                  // onClick={() => handleSort('automatched')}
-                >
-                  <div className='flex items-center gap-1'>
-                    Auto Matched
-                    {/* <span className='text-xs'>
-                      {getSortIcon('automatched')}
-                    </span> */}
-                  </div>
-                </th>
-                <th
-                  className='px-6 py-3'
-                  // onClick={() => handleSort('manualmatched')}
-                >
-                  <div className='flex items-center gap-1'>
-                    Manual Matched
-                    {/* <span className='text-xs'>
-                      {getSortIcon('manualmatched')}
-                    </span> */}
-                  </div>
-                </th>
-                <th
-                  className='px-6 py-3'
-                  // onClick={() => handleSort('unmatched')}
-                >
-                  <div className='flex items-center gap-1'>
-                    Unmatched
-                    {/* <span className='text-xs'>{getSortIcon('unmatched')}</span> */}
-                  </div>
-                </th>
-                <th
-                  className='px-6 py-3'
-                  // onClick={() => handleSort('unmatch_percentage')}
-                >
-                  <div className='flex items-center gap-1 whitespace-nowrap'>
-                    % Unmatched
-                    {/* <span className='text-xs'>{getSortIcon('unmatch_percentage')}</span> */}
-                  </div>
-                </th>
-                <th className='px-6 py-3 text-center'>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredAndSortedData?.length > 0 ? (
-                filteredAndSortedData.map((item) => (
-                  <tr
-                    key={item.metadata_id}
-                    className='bg-white border-b border-slate-300 hover:bg-slate-50'
+          <div className='max-h-[500px] overflow-y-auto'>
+            <table className='w-full text-sm text-left'>
+              <thead className='text-xs text-slate-500 uppercase bg-slate-50'>
+                <tr>
+                  <th
+                    className='px-6 py-3'
+                    // onClick={() => handleSort('institution_name')}
                   >
-                    <td className='px-6 py-4'>
-                      {highlightSearchTerm(
-                        item.institution_name,
-                        searchTerm,
-                        false
-                      )}
-                    </td>
-                    <td className='px-6 py-4'>
-                      {item.completed_date.split('T')[0]}
-                    </td>
-                    <td className='px-6 py-4 text-green-600'>
-                      {formatNumber(item.auto_match_count)}
-                    </td>
-                    <td className='px-6 py-4 text-blue-600'>
-                      {formatNumber(item.manual_match_count)}
-                    </td>
-                    <td className='px-6 py-4 text-red-600'>
-                      {formatNumber(item.unmatch_count)}
-                    </td>
-                    <td className='px-6 py-4 text-red-600'>
-                      {formatNumber(item.unmatch_percentage)}%
-                    </td>
-                    <td className='flex px-6 py-4 text-center space-x-2'>
-                      <button
-                        onClick={() => handleDownloadMatched(item)}
-                        className={`bg-blue-600 text-white px-2 py-1 rounded-md hover:bg-blue-700 text-xs whitespace-nowrap cursor-pointer ${
-                          loadingDownload ? 'cursor-progress' : ''
-                        }`}
-                      >
-                        Download Matched
-                      </button>
-                      <button
-                        onClick={() => handleDownloadUnmatched(item)}
-                        className={`bg-slate-500 text-white px-2 py-1 rounded-md hover:bg-slate-600 text-xs whitespace-nowrap cursor-pointer ${
-                          loadingDownload ? 'cursor-progress' : ''
-                        }`}
-                      >
-                        Download Unmatched
-                      </button>
+                    <div className='flex items-center gap-1'>
+                      Ministry/Institution
+                      {/* <span className='text-xs'>
+                        {getSortIcon('institution_name')}
+                      </span> */}
+                    </div>
+                  </th>
+                  <th
+                    className='px-6 py-3'
+                    // onClick={() => handleSort('date')}
+                  >
+                    <div className='flex items-center gap-1'>
+                      Completion Date
+                      {/* <span className='text-xs'>{getSortIcon('date')}</span> */}
+                    </div>
+                  </th>
+                  <th
+                    className='px-6 py-3'
+                    // onClick={() => handleSort('automatched')}
+                  >
+                    <div className='flex items-center gap-1'>
+                      Auto Matched
+                      {/* <span className='text-xs'>
+                        {getSortIcon('automatched')}
+                      </span> */}
+                    </div>
+                  </th>
+                  <th
+                    className='px-6 py-3'
+                    // onClick={() => handleSort('manualmatched')}
+                  >
+                    <div className='flex items-center gap-1'>
+                      Manual Matched
+                      {/* <span className='text-xs'>
+                        {getSortIcon('manualmatched')}
+                      </span> */}
+                    </div>
+                  </th>
+                  <th
+                    className='px-6 py-3'
+                    // onClick={() => handleSort('unmatched')}
+                  >
+                    <div className='flex items-center gap-1'>
+                      Unmatched
+                      {/* <span className='text-xs'>{getSortIcon('unmatched')}</span> */}
+                    </div>
+                  </th>
+                  <th
+                    className='px-6 py-3'
+                    // onClick={() => handleSort('unmatch_percentage')}
+                  >
+                    <div className='flex items-center gap-1 whitespace-nowrap'>
+                      % Unmatched
+                      {/* <span className='text-xs'>{getSortIcon('unmatch_percentage')}</span> */}
+                    </div>
+                  </th>
+                  <th className='px-6 py-3 text-center'>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredAndSortedData?.length > 0 ? (
+                  filteredAndSortedData.map((item) => (
+                    <tr
+                      key={item.metadata_id}
+                      className='bg-white border-b border-slate-300 hover:bg-slate-50'
+                    >
+                      <td className='px-6 py-4'>
+                        {highlightSearchTerm(
+                          item.institution_name,
+                          searchTerm,
+                          false
+                        )}
+                      </td>
+                      <td className='px-6 py-4'>
+                        {item.completed_date.split('T')[0]}
+                      </td>
+                      <td className='px-6 py-4 text-green-600'>
+                        {formatNumber(item.auto_match_count)}
+                      </td>
+                      <td className='px-6 py-4 text-blue-600'>
+                        {formatNumber(item.manual_match_count)}
+                      </td>
+                      <td className='px-6 py-4 text-red-600'>
+                        {formatNumber(item.unmatch_count)}
+                      </td>
+                      <td className='px-6 py-4 text-red-600'>
+                        {formatNumber(item.unmatch_percentage)}%
+                      </td>
+                      <td className='flex px-6 py-4 text-center space-x-2'>
+                        <button
+                          onClick={() => handleDownloadMatched(item)}
+                          className={`bg-blue-600 text-white px-2 py-1 rounded-md hover:bg-blue-700 text-xs whitespace-nowrap cursor-pointer ${
+                            loadingDownload ? 'cursor-progress' : ''
+                          }`}
+                        >
+                          Download Matched
+                        </button>
+                        <button
+                          onClick={() => handleDownloadUnmatched(item)}
+                          className={`bg-slate-500 text-white px-2 py-1 rounded-md hover:bg-slate-600 text-xs whitespace-nowrap cursor-pointer ${
+                            loadingDownload ? 'cursor-progress' : ''
+                          }`}
+                        >
+                          Download Unmatched
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      colSpan='8'
+                      className='px-6 py-8 text-center text-gray-500'
+                    >
+                      <div className='flex flex-col items-center gap-2'>
+                        <Search size={24} className='text-gray-300' />
+                        <p>No records found matching your criteria</p>
+                        <p className='text-xs'>
+                          Try adjusting your search or filters
+                        </p>
+                      </div>
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan='8'
-                    className='px-6 py-8 text-center text-gray-500'
-                  >
-                    <div className='flex flex-col items-center gap-2'>
-                      <Search size={24} className='text-gray-300' />
-                      <p>No records found matching your criteria</p>
-                      <p className='text-xs'>
-                        Try adjusting your search or filters
-                      </p>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
+          </div>
           <div className='ml-auto text-sm text-gray-600 mt-4'>
             Showing {filteredAndSortedData?.length} of {getTotalRecordCount()}{' '}
             records
