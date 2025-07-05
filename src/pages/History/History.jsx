@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import RangeCalendarFilter from './Calendar';
 import useHistory from './hooks/useHistory';
-import useDownload from './hooks/useDownload';
+import useFileDownloader from './hooks/useDownload.js';
 import { use } from 'react';
 
 const History = () => {
@@ -23,7 +23,7 @@ const History = () => {
     endDate: null,
   });
 
-  const { downloadFile, loadingDownload } = useDownload();
+  const { isDownloading, downloadFile } = useFileDownloader();
 
   const handleDownloadMatched = (item) => {
     downloadFile('match', item.metadata_id, 'csv', item.institution_name);
@@ -207,7 +207,7 @@ const History = () => {
   return (
     <div
       id='historyPage'
-      className={`relative ${loadingDownload ? 'cursor-progress' : ''}`}
+      className={`relative ${isDownloading ? 'cursor-progress' : ''}`}
     >
       <div className='bg-white p-6 rounded-xl shadow-sm'>
         <div className='mb-6 space-y-4'>
@@ -345,7 +345,7 @@ const History = () => {
                         <button
                           onClick={() => handleDownloadMatched(item)}
                           className={`bg-blue-600 text-white px-2 py-1 rounded-md hover:bg-blue-700 text-xs whitespace-nowrap cursor-pointer ${
-                            loadingDownload ? 'cursor-progress' : ''
+                            isDownloading ? 'cursor-progress' : ''
                           }`}
                         >
                           Download Matched
@@ -353,7 +353,7 @@ const History = () => {
                         <button
                           onClick={() => handleDownloadUnmatched(item)}
                           className={`bg-slate-500 text-white px-2 py-1 rounded-md hover:bg-slate-600 text-xs whitespace-nowrap cursor-pointer ${
-                            loadingDownload ? 'cursor-progress' : ''
+                            isDownloading ? 'cursor-progress' : ''
                           }`}
                         >
                           Download Unmatched

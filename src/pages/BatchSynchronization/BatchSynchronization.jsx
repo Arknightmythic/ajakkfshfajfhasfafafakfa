@@ -25,7 +25,7 @@ const BatchSynchronization = () => {
     A: "bg-green-200 text-green-800",
     B: "bg-yellow-200 text-yellow-800",
     C: "bg-orange-200 text-orange-800",
-    D: "bg-red-300 text-red-900",
+    D: "bg-purple-200 text-purple-800",
     E: "bg-red-200 text-red-800",
   };
 
@@ -125,7 +125,7 @@ const BatchSynchronization = () => {
               onChange={(e) => setGradeFilter(e.target.value)}
               className="w-full sm:w-auto px-3 py-2 border border-slate-300 rounded-md text-sm"
             >
-              <option value="">All Grades</option>
+              <option value="">All Grade</option>
               {["A", "B", "C", "D", "E"].map((g) => (
                 <option key={g} value={g}>
                   Grade {g}
@@ -136,7 +136,7 @@ const BatchSynchronization = () => {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="w-full sm:w-auto px-3 py-2 border border-slate-300 rounded-md text-sm"
             >
-              <option value="">All Statuses</option>
+              <option value="">All Status</option>
               {["Awaiting Action", "In Progress", "Completed"].map((s) => (
                 <option key={s} value={s}>
                   {s}

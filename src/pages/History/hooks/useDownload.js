@@ -1,46 +1,47 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react'; 
 import axiosInstance from '../../../axios/axiosInstance';
 
-const useDownload = () => {
-  const [loadingDownload, setLoadingDownload] = useState(false);
+const useFileDownloader = () => {
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const downloadFile = async (
-    matchType,
-    metadataId,
-    format = 'csv',
-    institutionName
-  ) => {
+  const downloadFile = (match_type, metadata_id, file_format, filename_prefix) => {
+    setIsDownloading(true);
+    setError(null);
     try {
-      setLoadingDownload(true);
-      const response = await axiosInstance.general.post(
-        '/history',
-        {
-          match_type: matchType,
-          metadata_id: metadataId,
-          format: format,
-        },
-        {
-          responseType: 'blob',
-        }
-      );
+      const baseURL = axiosInstance.general.defaults.baseURL;
 
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${matchType}_data_${institutionName}.${format}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Download failed:', error);
-      alert('Download failed. Please try again.');
+      if (!baseURL) {
+        throw new Error("Base URL for 'general' instance is not configured.");
+      }
+
+      const params = new URLSearchParams({
+        match_type,
+        metadata_id,
+        file_format,
+      });
+      
+      const url = `${baseURL}/history/download?${params.toString()}`;
+
+      const link = document.createElement('a');
+      link.href = url;
+      
+      const fileName = `${filename_prefix}_${match_type}.${file_format}`;
+      link.setAttribute('download', fileName);
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+    } catch (err) {
+      console.error("Download failed:", err);
+      setError("Gagal memulai unduhan.");
     } finally {
-      setLoadingDownload(false);
+      setIsDownloading(false);
     }
   };
 
-  return { downloadFile, loadingDownload };
+  return { isDownloading, error, downloadFile };
 };
 
-export default useDownload;
+export default useFileDownloader;
