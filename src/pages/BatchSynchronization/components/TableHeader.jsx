@@ -29,18 +29,36 @@ const TableHeader = ({
       "kecamatan",
       "kelurahan",
       "status_kematian",
-      "match_score"
+      "match_score",
     ],
   };
 
   const rawKeys = Object.keys(data[0]);
 
-  const headers =
-    grade
-      ? gradeColumnsMap[grade.toUpperCase()]?.filter((k) => rawKeys.includes(k)) ?? []
-      : type === "investigate"
-      ? rawKeys.filter((k) => k !== "institution_id" && k !== "similiarity_data")
-      : rawKeys.filter((k) => k !== "id" && k !== "nama");
+  const prefixMap = {
+    investigate: "institution_",
+    matches: "master_",
+  };
+
+  const prefix = prefixMap[type] || "";
+
+  const baseColumns = grade
+    ? gradeColumnsMap[grade.toUpperCase()] ?? []
+    : rawKeys.map((key) => key.replace(prefix, ""));
+
+  let headers = baseColumns
+    .map((col) => `${prefix}${col}`)
+    .filter((key) => rawKeys.includes(key));
+
+  if (type === "matches") {
+    headers = headers.filter(
+      (key) =>
+        !key.endsWith("id") && key !== "master_nama"
+    );
+    if (rawKeys.includes("reason")) {
+      headers.push("reason");
+    }
+  }
 
 
   return (
@@ -61,7 +79,10 @@ const TableHeader = ({
           )}
           {headers.map((key) => (
             <th key={key} className="px-6 py-3">
-              {key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+              {key
+                .replace(prefix, "")
+                .replace(/_/g, " ")
+                .replace(/\b\w/g, (c) => c.toUpperCase())}
             </th>
           ))}
         </tr>
@@ -92,13 +113,15 @@ const TableHeader = ({
               )}
               {headers.map((key) => (
                 <td
-                key={key}
-                className={`px-6 py-2 ${key === "nama_lengkap" ? "font-semibold text-[#1E293B]" : ""}`}
-              >
-                {key === "match_score"
-                  ? `${(item[key] * 100).toFixed(2)}%`
-                  : item[key]}
-              </td>
+                  key={key}
+                  className={`px-6 py-2 ${
+                    key.includes("nama_lengkap") ? "font-semibold text-[#1E293B]" : ""
+                  }`}
+                >
+                  {key === `${prefix}match_score` && typeof item[key] === "number"
+                    ? `${(item[key] * 100).toFixed(2)}%`
+                    : item[key]}
+                </td>
               ))}
             </tr>
           );

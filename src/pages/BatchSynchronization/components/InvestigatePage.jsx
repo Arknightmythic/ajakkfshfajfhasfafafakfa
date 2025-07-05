@@ -1,7 +1,7 @@
 import { ArrowLeft, Loader2, CircleCheck } from "lucide-react";
 import TableHeader from "./TableHeader";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import DangerPopOut from "../../../components/PopOut/DangerPopOut";
 import { SuccessPopOut } from "../../../components/PopOut/SuccessPopOut";
 import useGetInvestigationData from "../hooks/useGetDataInvestigate";
@@ -15,66 +15,27 @@ const InvestigatePage = () => {
   const { metadata_id, institutionName, statusGrade } = location.state || {};
 
   const [selectedIndexes, setSelectedIndexes] = useState([]);
-  const [selectedMatches, setSelectedMatches] = useState([]);
   const [selectedMatchIndex, setSelectedMatchIndex] = useState(null);
   const [loadingOverlay, setLoadingOverlay] = useState(false);
 
   const { data, isLoading, error } = useGetInvestigationData(metadata_id);
   const { mutateAsync: postMatchData } = usePostMatchData(metadata_id);
 
-  const [sortedData, setSortedData] = useState([]);
-
-  useEffect(() => {
-    if (!data) return;
-
-    const hasReasonInSimilarity = (entry) =>
-      (entry.similiarity_data || []).some((item) => !!item.reason);
-
-    const sorted = [...data].sort((a, b) => {
-      const aHas = hasReasonInSimilarity(a);
-      const bHas = hasReasonInSimilarity(b);
+  const sortedData = useMemo(() => {
+    if (!data) return [];
+    return [...data].sort((a, b) => {
+      const aHas = !!a.pivot_reason;
+      const bHas = !!b.pivot_reason;
       return bHas - aHas;
     });
-
-    setSortedData(sorted);
   }, [data]);
 
-  useEffect(() => {
-  if (!sortedData) return;
+  console.log("sorted data", sortedData)
 
-  const sortByReason = (a, b) => {
-    const aHasReason = !!a.reason;
-    const bHasReason = !!b.reason;
-    return bHasReason - aHasReason;
-  };
-
-  if (selectedIndexes.length === 0) {
-    const allMatches = sortedData.flatMap((d) => d.similiarity_data || []);
-    const sortedMatches = [...allMatches].sort(sortByReason);
-    setSelectedMatches(sortedMatches);
-  } else {
-    const filtered = selectedIndexes.flatMap(
-      (i) => sortedData[i]?.similiarity_data || []
-    );
-    const sortedFiltered = [...filtered].sort(sortByReason);
-    setSelectedMatches(sortedFiltered);
-  }
-}, [sortedData, selectedIndexes]);
-
-
-  useEffect(() => {
-    if (!data) return;
-
-    if (selectedIndexes.length === 0) {
-      const allMatches = data.flatMap((d) => d.similiarity_data || []);
-      setSelectedMatches(allMatches);
-    } else {
-      const filtered = selectedIndexes.flatMap(
-        (i) => data[i]?.similiarity_data || []
-      );
-      setSelectedMatches(filtered);
-    }
-  }, [data, selectedIndexes]);
+  const selectedMatches = useMemo(() => {
+    if (selectedIndexes.length === 0) return sortedData;
+    return selectedIndexes.map((idx) => sortedData[idx]);
+  }, [sortedData, selectedIndexes]);
 
   useEffect(() => {
     setSelectedMatchIndex(null);
@@ -82,7 +43,7 @@ const InvestigatePage = () => {
 
   const selectedSource =
     selectedIndexes.length === 1 ? sortedData[selectedIndexes[0]] : null;
-  const similarityData = selectedSource?.similiarity_data || [];
+
   const isMatchButtonDisabled =
     selectedIndexes.length !== 1 ||
     selectedMatchIndex === null ||
@@ -90,41 +51,23 @@ const InvestigatePage = () => {
 
   const shouldShowMatchReason =
     selectedSource &&
-    (similarityData.length === 1 ||
-      (similarityData.length > 1 && selectedMatchIndex != null));
+    (selectedMatches.length === 1 ||
+      (selectedMatches.length > 1 && selectedMatchIndex != null));
 
-  const handleMarkAsMatch = async () => {
+  const handleMark = async (type) => {
     if (isMatchButtonDisabled || !selectedSource) return;
-    const selected = similarityData[selectedMatchIndex];
-
+    const selected = selectedMatches[selectedMatchIndex];
     setLoadingOverlay(true);
     try {
       await postMatchData({
-        institution_id: selectedSource.id.toString(),
-        nik: selected.nik,
-        match_type: "match",
+        institution_id: selected.pivot_institution_id.toString(),
+        nik: selected.master_nik,
+        match_type: type,
       });
     } finally {
       setLoadingOverlay(false);
     }
   };
-
-  const handleMarkAsUnmatch = async () => {
-    if (isMatchButtonDisabled || !selectedSource) return;
-    const selected = similarityData[selectedMatchIndex];
-
-    setLoadingOverlay(true);
-    try {
-      await postMatchData({
-        institution_id: selectedSource.id.toString(),
-        nik: selected.nik,
-        match_type: "unmatch",
-      });
-    } finally {
-      setLoadingOverlay(false);
-    }
-  };
-
 
   const { mutate: markAsDone, isPending } = useMutation({
     mutationFn: async () => {
@@ -162,8 +105,8 @@ const InvestigatePage = () => {
       color: "yellow",
     },
   };
-  const summary = summaryMap[statusGrade];
 
+  const summary = summaryMap[statusGrade];
   const colorClassMap = {
     red: {
       bg: "bg-red-50",
@@ -235,8 +178,12 @@ const InvestigatePage = () => {
             )
           }
         >
-          {isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CircleCheck className="w-4 h-4 mr-2" />}
-          {isPending ? 'Processing...' : 'Mark as Completed'}
+          {isPending ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <CircleCheck className="w-4 h-4 mr-2" />
+          )}
+          {isPending ? "Processing..." : "Mark as Completed"}
         </button>
       </div>
 
@@ -262,11 +209,16 @@ const InvestigatePage = () => {
             <div className="border border-slate-300 rounded-lg overflow-hidden">
               <div className="overflow-x-auto max-h-[40vh]">
                 <TableHeader
-                  // data={data}
-                  data={Array.isArray(sortedData) ? sortedData : []}
+                  data={sortedData.map((d) => ({
+                    ...Object.fromEntries(
+                      Object.entries(d).filter(([key]) =>
+                        key.startsWith("institution_")
+                      )
+                    ),
+                  }))}
                   type="investigate"
-                  selectionType="radio"
                   grade={statusGrade}
+                  selectionType="radio"
                   selectedRadioIndex={selectedIndexes[0] ?? null}
                   onRadioChange={(idx) => setSelectedIndexes([idx])}
                   radioGroupName="source"
@@ -281,14 +233,13 @@ const InvestigatePage = () => {
                     : "bg-red-500 text-white hover:bg-red-600 cursor-pointer"
                 }`}
                 disabled={isMatchButtonDisabled}
-                onClick={handleMarkAsUnmatch}
+                onClick={() => handleMark("unmatch")}
               >
                 Mark as Unmatch
               </button>
             </div>
           </div>
 
-          {/* Potential Matches */}
           <div>
             <h3 className="font-semibold text-lg mb-2">
               Potential Matches (from DUKCAPIL)
@@ -296,8 +247,13 @@ const InvestigatePage = () => {
             <div className="border border-slate-300 rounded-lg overflow-hidden">
               <div className="overflow-x-auto max-h-[40vh]">
                 <TableHeader
-                  // data={selectedMatches.map(({ reason, ...rest }) => rest)}
-                  data={Array.isArray(selectedMatches) ? selectedMatches.map(({ reason, ...rest }) => rest) : []}
+                  data={selectedMatches.map((d) => ({
+                    ...Object.fromEntries(
+                      Object.entries(d).filter(([key]) =>
+                        key.startsWith("master_")
+                      )
+                    ),
+                  }))}
                   type="matches"
                   selectionType="radio"
                   selectedRadioIndex={selectedMatchIndex}
@@ -311,8 +267,8 @@ const InvestigatePage = () => {
                 <h4 className="font-semibold text-blue-800">Match Reason</h4>
                 <p className="text-sm text-slate-700 mt-1">
                   {selectedMatchIndex != null
-                    ? similarityData[selectedMatchIndex]?.reason
-                    : similarityData[0]?.reason}
+                    ? selectedMatches[selectedMatchIndex]?.pivot_reason
+                    : selectedMatches[0]?.pivot_reason}
                 </p>
               </div>
             )}
@@ -324,7 +280,7 @@ const InvestigatePage = () => {
                     : "bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"
                 }`}
                 disabled={isMatchButtonDisabled}
-                onClick={handleMarkAsMatch}
+                onClick={() => handleMark("match")}
               >
                 Mark as Match
               </button>

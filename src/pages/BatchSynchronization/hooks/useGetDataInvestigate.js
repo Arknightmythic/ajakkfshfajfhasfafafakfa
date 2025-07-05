@@ -3,8 +3,12 @@ import axiosInstance from '../../../axios/axiosInstance';
 
 const getInvestigationData = async (metadata_id) => {
   const res = await axiosInstance.general.get(`/sync/institution-detail/${metadata_id}`);
-  console.log("line 6", res.data.data)
-  return res.data.data; 
+  const allData = res.data.data;
+
+  const filtered = allData.filter(item => item.pivot_is_match === null);
+  console.log("res from backend:", filtered)
+
+  return filtered;
 };
 
 const useGetInvestigationData = (metadata_id) => {
