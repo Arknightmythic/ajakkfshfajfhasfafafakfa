@@ -32,6 +32,21 @@ const InvestigatePage = () => {
 
   console.log("sorted data", sortedData)
 
+  useEffect(() => {
+  // Hanya jalankan jika sortedData sudah berisi array
+  if (sortedData && sortedData.length > 0) {
+    // Cari index dari item pertama yang nilainya null atau undefined
+    const problematicIndex = sortedData.findIndex(item => item === null || item === undefined);
+    
+    if (problematicIndex > -1) {
+      // Jika ditemukan, tampilkan pesan error yang jelas
+      console.error(`DITEMUKAN! Ada item null/undefined di dalam 'sortedData' pada index: ${problematicIndex}`);
+    } else {
+      console.log("Pemeriksaan selesai: Tidak ada item null/undefined di tingkat atas array 'sortedData'.");
+    }
+  }
+}, [sortedData]); // Kode ini akan berjalan setiap kali sortedData berubah
+
   const selectedMatches = useMemo(() => {
     if (selectedIndexes.length === 0) return sortedData;
     return selectedIndexes.map((idx) => sortedData[idx]);
@@ -209,7 +224,7 @@ const InvestigatePage = () => {
             <div className="border border-slate-300 rounded-lg overflow-hidden">
               <div className="overflow-x-auto max-h-[40vh]">
                 <TableHeader
-                  data={sortedData.map((d) => ({
+                  data={sortedData.filter(Boolean).map((d) => ({
                     ...Object.fromEntries(
                       Object.entries(d).filter(([key]) =>
                         key.startsWith("institution_")
@@ -247,7 +262,7 @@ const InvestigatePage = () => {
             <div className="border border-slate-300 rounded-lg overflow-hidden">
               <div className="overflow-x-auto max-h-[40vh]">
                 <TableHeader
-                  data={selectedMatches.map((d) => ({
+                  data={selectedMatches.filter(Boolean).map((d) => ({
                     ...Object.fromEntries(
                       Object.entries(d).filter(([key]) =>
                         key.startsWith("master_")
