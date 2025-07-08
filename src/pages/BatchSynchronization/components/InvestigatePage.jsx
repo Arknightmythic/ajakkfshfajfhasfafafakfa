@@ -276,7 +276,7 @@ const InvestigatePage = () => {
             </div>
             {shouldShowMatchReason && (
               <div className="mt-4 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg">
-                <h4 className="font-semibold text-blue-800">Match Reason</h4>
+                <h4 className="font-semibold text-blue-800">AI Insight</h4>
                 <p className="text-sm text-slate-700 mt-1">
                   {selectedMatchIndex != null
                     ? selectedMatches[selectedMatchIndex]?.pivot_reason
