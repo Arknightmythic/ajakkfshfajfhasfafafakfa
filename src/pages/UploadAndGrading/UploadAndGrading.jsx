@@ -79,6 +79,15 @@ const UploadAndGrading = () => {
   const { mutateAsync: syncByGrade, isPending, isError, error:syncError } = useSync();
   const [loadingIds, setLoadingIds] = useState([]);
 
+  const formatNumberCurrency = (number) => {
+    const formattedAmount = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(number);
+
+    return formattedAmount
+  }
+
   const handleSync = async (id, grade) => {
     setLoadingIds((prev) => [...prev, id]);
     SuccessPopOut(
@@ -260,7 +269,7 @@ const UploadAndGrading = () => {
                   <tr key={index} className="bg-white border-b border-slate-200 hover:bg-gray-50">
                     <td className="px-6 py-4">{item.institution_name}</td>
                     <td className="px-6 py-4">{item.file_name}</td>
-                    <td className="px-6 py-4">{item.total_records}</td>
+                    <td className="px-6 py-4">{new Intl.NumberFormat('id-ID').format(item.total_records)}</td>
                     <td className="px-6 py-4">
                       <span className={`font-bold text-xs px-2 py-1 rounded ${getGradeClass(item.grade)}`}>
                         Grade {item.grade}
