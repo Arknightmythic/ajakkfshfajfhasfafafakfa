@@ -79,15 +79,6 @@ const UploadAndGrading = () => {
   const { mutateAsync: syncByGrade, isPending, isError, error:syncError } = useSync();
   const [loadingIds, setLoadingIds] = useState([]);
 
-  const formatNumberCurrency = (number) => {
-    const formattedAmount = new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(number);
-
-    return formattedAmount
-  }
-
   const handleSync = async (id, grade) => {
     setLoadingIds((prev) => [...prev, id]);
     SuccessPopOut(
