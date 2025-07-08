@@ -13,11 +13,6 @@ const BatchSynchronization = () => {
 
 
   const [currentPage, setCurrentPage] = useState("list");
-  const [selectedPreviewData, setSelectedPreviewData] = useState({
-    matchedSourceData: [],
-    matchedDukcapilData: [],
-    unmatchedSourceData: [],
-  });
 
   const navigate = useNavigate();
 
@@ -163,7 +158,7 @@ const BatchSynchronization = () => {
                   .map((item, idx) => (
                     <tr key={idx}>
                       <td className="px-6 py-4 font-medium">{item.institution_name}</td>
-                      <td className="px-6 py-4">{item.total_records}</td>
+                      <td className="px-6 py-4">{new Intl.NumberFormat('id-ID').format(item.total_records)}</td>
                       <td className="px-6 py-4">
                         <span
                           className={`${gradeColor[item.grade]} font-bold text-xs px-2 py-1 rounded`}

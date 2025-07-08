@@ -339,7 +339,7 @@ const History = () => {
                         {formatNumber(item.unmatch_count)}
                       </td>
                       <td className='px-6 py-4 text-red-600'>
-                        {formatNumber(item.unmatch_percentage)}%
+                        {formatNumber(item.unmatch_percentage.toFixed(2))}%
                       </td>
                       <td className='flex px-6 py-4 text-center space-x-2'>
                         <button

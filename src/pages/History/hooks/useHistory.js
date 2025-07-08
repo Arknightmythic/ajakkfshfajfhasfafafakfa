@@ -13,6 +13,7 @@ const useHistory = () => {
           '/history/'
         );
         setHistoryData(response.data);
+        console.log(response.data)
       } catch (err) {
         setError(
           err?.response?.data?.message || err.message || 'Unknown error'

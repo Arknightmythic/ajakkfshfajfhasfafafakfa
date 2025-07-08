@@ -2,6 +2,7 @@ import { ArrowLeft } from "lucide-react";
 import TableHeader from "./TableHeader";
 import { useLocation, useNavigate } from "react-router-dom";
 import useGetPreviewData from "../hooks/useGetDataPreview";
+import React from "react";
 
 const PreviewPage = () => {
   const navigate = useNavigate();
@@ -14,9 +15,17 @@ const PreviewPage = () => {
 
   } = location.state || {};
   const { data, isLoading, error } = useGetPreviewData(metadata_id);
-  console.log("line 18",metadata_id)
 
-    if (isLoading) {
+  const sortedData = React.useMemo(() => {
+    if (!data) return { match: [], unmatch: [] };
+
+    const sortedMatch = [...(data.match || [])].sort((a, b) => a.institution.id - b.institution.id);
+    const sortedUnmatch = [...(data.unmatch || [])].sort((a, b) => a.institution.id - b.institution.id);
+
+    return { match: sortedMatch, unmatch: sortedUnmatch };
+  }, [data]);
+
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[300px]">
         <p className="font-medium animate-pulse">Loading preview data...</p>
@@ -32,9 +41,9 @@ const PreviewPage = () => {
     );
   }
 
-  const matchedInstitution = data?.match?.map((item) => item.institution) ?? [];
-  const matchedMaster = data?.match?.map((item) => item.master).filter(Boolean) ?? [];
-  const unmatchedInstitution = data?.unmatch?.map((item) => item.institution) ?? [];
+  const matchedInstitution = sortedData.match.map((item) => item.institution);
+  const matchedMaster = sortedData.match.map((item) => item.master).filter(Boolean);
+  const unmatchedInstitution = sortedData.unmatch.map((item) => item.institution);
 
   return (
     <div >
@@ -62,7 +71,7 @@ const PreviewPage = () => {
                 <div className="overflow-x-auto max-h-[40vh]">
                   <TableHeader
                     data={matchedInstitution}
-                    type="preview"
+                    type="preview_institution"
                     selectionType="none"
                     grade={statusGrade}
                   />
@@ -76,7 +85,7 @@ const PreviewPage = () => {
                 <div className="overflow-x-auto max-h-[40vh]">
                   <TableHeader
                     data={matchedMaster}
-                    type="preview"
+                    type="preview_master"
                     selectionType="none"
                   />
                 </div>
