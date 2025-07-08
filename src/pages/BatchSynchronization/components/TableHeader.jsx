@@ -44,9 +44,17 @@ const TableHeader = ({
     ? gradeColumnsMap[grade.toUpperCase()] ?? []
     : rawKeys.map((key) => key.replace(prefix, ""));
 
+  // let headers = baseColumns
+  //   .map((col) => `${prefix}${col}`)
+  //   .filter((key) => rawKeys.includes(key));
+
   let headers = baseColumns
     .map((col) => `${prefix}${col}`)
-    .filter((key) => rawKeys.includes(key));
+    .filter((key) => {
+      if (type === "preview") return key !== "nama" && rawKeys.includes(key);
+      return rawKeys.includes(key);
+    });
+
 
   if (type === "matches") {
     headers = headers.filter(
@@ -63,7 +71,9 @@ const TableHeader = ({
     <table className="w-full text-sm text-left">
       <thead className="text-xs text-slate-500 uppercase bg-slate-50">
         <tr>
-          <th className="p-2 w-10 sticky left-0 bg-slate-50"></th>
+          {selectionType === "radio" && type !== "preview" && (
+            <th className="p-2 w-10 sticky left-0 bg-slate-50"></th>
+          )}
           {headers.map((key) => (
             <th key={key} className="px-6 py-3">
               {key
@@ -73,6 +83,7 @@ const TableHeader = ({
             </th>
           ))}
         </tr>
+
       </thead>
       <tbody>
         {data.map((item, idx) => {
@@ -83,15 +94,17 @@ const TableHeader = ({
 
           return (
             <tr key={idx} className="border-b border-slate-200 hover:bg-slate-100">
-              <td className="p-2 w-10 sticky left-0 bg-white">
-                <input
-                  type="radio"
-                  name={radioGroupName}
-                  checked={selectedRadioIndex === idx}
-                  onChange={() => onRadioChange?.(idx)}
-                  className="rounded border-slate-300"
-                />
-              </td>
+              {selectionType === "radio" && type !== "preview" && (
+                <td className="p-2 w-10 sticky left-0 bg-white">
+                  <input
+                    type="radio"
+                    name={radioGroupName}
+                    checked={selectedRadioIndex === idx}
+                    onChange={() => onRadioChange?.(idx)}
+                    className="rounded border-slate-300"
+                  />
+                </td>
+              )}
               {headers.map((key) => (
                 <td
                   key={key}
@@ -105,6 +118,7 @@ const TableHeader = ({
                 </td>
               ))}
             </tr>
+
           );
         })}
       </tbody>

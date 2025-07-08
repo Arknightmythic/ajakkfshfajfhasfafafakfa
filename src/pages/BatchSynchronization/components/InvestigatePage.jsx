@@ -33,19 +33,16 @@ const InvestigatePage = () => {
   console.log("sorted data", sortedData)
 
   useEffect(() => {
-  // Hanya jalankan jika sortedData sudah berisi array
-  if (sortedData && sortedData.length > 0) {
-    // Cari index dari item pertama yang nilainya null atau undefined
-    const problematicIndex = sortedData.findIndex(item => item === null || item === undefined);
-    
-    if (problematicIndex > -1) {
-      // Jika ditemukan, tampilkan pesan error yang jelas
-      console.error(`DITEMUKAN! Ada item null/undefined di dalam 'sortedData' pada index: ${problematicIndex}`);
-    } else {
-      console.log("Pemeriksaan selesai: Tidak ada item null/undefined di tingkat atas array 'sortedData'.");
+    if (sortedData && sortedData.length > 0) {
+      const problematicIndex = sortedData.findIndex(item => item === null || item === undefined);
+      
+      if (problematicIndex > -1) {
+        console.error(`DITEMUKAN! Ada item null/undefined di dalam 'sortedData' pada index: ${problematicIndex}`);
+      } else {
+        console.log("Pemeriksaan selesai: Tidak ada item null/undefined di tingkat atas array 'sortedData'.");
+      }
     }
-  }
-}, [sortedData]); // Kode ini akan berjalan setiap kali sortedData berubah
+  }, [sortedData]); 
 
   const selectedMatches = useMemo(() => {
     if (selectedIndexes.length === 0) return sortedData;

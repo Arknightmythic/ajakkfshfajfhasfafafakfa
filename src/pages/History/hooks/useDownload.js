@@ -27,6 +27,7 @@ const useFileDownloader = () => {
       link.href = url;
       
       const fileName = `${filename_prefix}_${match_type}.${file_format}`;
+      console.log(fileName)
       link.setAttribute('download', fileName);
 
       document.body.appendChild(link);
