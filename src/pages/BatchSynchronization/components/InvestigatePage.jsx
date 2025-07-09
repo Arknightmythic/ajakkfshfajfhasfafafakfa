@@ -8,6 +8,7 @@ import useGetInvestigationData from "../hooks/useGetDataInvestigate";
 import usePostMatchData from "../hooks/usePostMatchData";
 import { useMutation } from "@tanstack/react-query";
 import axiosInstance from "../../../axios/axiosInstance";
+import { Sparkles } from 'lucide-react';
 
 const InvestigatePage = () => {
   const navigate = useNavigate();
@@ -276,7 +277,10 @@ const InvestigatePage = () => {
             </div>
             {shouldShowMatchReason && (
               <div className="mt-4 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg">
-                <h4 className="font-semibold text-blue-800">AI Insight</h4>
+                <div className="flex items-center gap-2">
+                  <Sparkles className=" text-blue-800 animate-pulse w-4 h-4"/>
+                  <h4 className="font-semibold text-blue-800">AI Insight</h4>
+                </div>
                 <p className="text-sm text-slate-700 mt-1">
                   {selectedMatchIndex != null
                     ? selectedMatches[selectedMatchIndex]?.pivot_reason
