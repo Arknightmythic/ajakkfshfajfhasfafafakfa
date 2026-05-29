@@ -7,6 +7,8 @@ const Layout = () => {
   const location = useLocation();
   const [showChatbot, setShowChatbot] = useState(false);
 
+  const chatbotUrl = import.meta.env.VITE_CHATBOT_URL;
+
   const hideHeaderRoutes = [
     '/batch-synchronization/preview',
     '/batch-synchronization/investigate',
@@ -63,7 +65,7 @@ const Layout = () => {
             }}
           >
             <iframe
-              src="http://103.67.43.194/chat/4sLHmOtVI6S7bdpV"
+              src={chatbotUrl}
               style={{
                 width: '100%',
                 height: '100%',
