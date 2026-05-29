@@ -14,11 +14,15 @@ const useUploadFile = () => {
       formData.append('file', file);
       formData.append('institution_name', institutionName);
 
+      console.time("UPLOAD");
+
       const response = await axiosInstance.general.post('/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
+      
+      console.timeEnd("UPLOAD");
 
       if (response.status === 200) {
         return true;
