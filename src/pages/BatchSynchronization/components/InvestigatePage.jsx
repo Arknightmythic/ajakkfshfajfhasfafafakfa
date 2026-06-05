@@ -166,7 +166,7 @@ const InvestigatePage = () => {
   return (
     <div className="relative">
       {(loadingOverlay || isPending) && (
-        <div className="absolute inset-0 bg-white/10 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
+        <div className="absolute inset-0 bg-white/10 backdrop-blur-sm z-30 flex items-center justify-center rounded-lg">
           <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
         </div>
       )}

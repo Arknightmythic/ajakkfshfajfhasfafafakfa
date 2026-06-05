@@ -3,8 +3,12 @@ import { useState } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 
+const SIDEBAR_EXPANDED_WIDTH = 'ml-64';
+const SIDEBAR_COLLAPSED_WIDTH = 'ml-16';
+
 const Layout = () => {
   const location = useLocation();
+  const [collapsed, setCollapsed] = useState(false);
   const [showChatbot, setShowChatbot] = useState(false);
 
   const chatbotUrl = import.meta.env.VITE_CHATBOT_URL;
@@ -17,11 +21,13 @@ const Layout = () => {
 
   return (
     <div className="flex min-h-screen">
-      <div className="w-64 z-10">
-        <Sidebar />
-      </div>
+      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((prev) => !prev)} />
 
-      <div className="flex flex-col flex-1 relative z-0">
+      <div
+        className={`flex flex-col flex-1 relative z-0 transition-all duration-300 ease-in-out ${
+          collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_EXPANDED_WIDTH
+        }`}
+      >
         {!shouldHideHeader && <Header />}
         <main className="flex-1 px-8 pt-8 bg-[#F9FAFB] overflow-auto relative">
           <Outlet />

@@ -44,7 +44,7 @@ const RangeCalendarFilter = ({
     const year = date.getFullYear();
     const month = date.getMonth();
     const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
+    // const lastDay = new Date(year, month + 1, 0);
     const startDate = new Date(firstDay);
     startDate.setDate(startDate.getDate() - firstDay.getDay());
 
@@ -197,7 +197,7 @@ const RangeCalendarFilter = ({
       {isOpen && (
         <div
           ref={modalRef}
-          className='fixed z-50 bg-white border border-gray-200 rounded-lg shadow-xl'
+          className='fixed z-30 bg-white border border-gray-200 rounded-lg shadow-xl'
           style={{
             left:
               modalPosition.x ||

@@ -1,15 +1,13 @@
 import { useMutation } from '@tanstack/react-query';
 import axiosInstance from '../../../axios/axiosInstance';
 
-const syncByGrade = async ({ id, grade }) => {
-  const lowerGrade = grade?.toLowerCase();
-  const endpoint = `/api/sync/grade-${lowerGrade}`;
+const syncByGrade = async ({ id }) => {
+  // Gunakan endpoint baru
+  const endpoint = `/match/?file_id=${id}`;
 
-  const res = await axiosInstance.synchronize.post(endpoint, {
-    file_id: id,
-  });
+  // Sesuai postman: Body dikosongkan
+  const res = await axiosInstance.general.post(endpoint, null);
 
-  console.log("line 12", res)
   return res.data; 
 };
 

@@ -23,7 +23,7 @@ const Header = () => {
     return (
         <header className="flex flex-row bg-[#F9FAFB] justify-between items-center ">
             <div>
-                <h1 className="text-3xl font-bold mx-8 mt-8">{title}</h1>
+                <h1 className="text-3xl font-bold mx-8 mt-6">{title}</h1>
             </div>
         </header>
     )
