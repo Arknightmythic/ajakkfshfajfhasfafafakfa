@@ -358,52 +358,70 @@ const UploadAndGrading = () => {
                       <p className="text-slate-500">Fetching records...</p>
                     </td>
                   </tr>
-                ) : !data || data.length === 0 ? (
+                ) : (!data || data.length === 0) ? (   // <--- Kurung kurawal "{" di awal sudah dihapus di sini
                   <tr>
                     <td colSpan="6" className="text-center text-gray-500 py-6">
                       No data found
                     </td>
                   </tr>
                 ) : (
-                  // Map secara langsung dari variabel "data" yang disediakan useGetData
                   [...data]
                   .sort((a, b) => new Date(b.upload_timestamp) - new Date(a.upload_timestamp))
-                  .map((item, index) => (
-                  <tr key={index} className="bg-white border-b border-slate-200 hover:bg-gray-50">
-                    <td className="px-6 py-4">{item.institution_name}</td>
-                    <td className="px-6 py-4">{item.original_filename}</td>
-                    <td className="px-6 py-4">{new Intl.NumberFormat('id-ID').format(item.row_count)}</td>
-                    <td className="px-6 py-4">
-                      <span className={`font-bold text-xs px-2 py-1 rounded ${getGradeClass(item.grade)}`}>
-                        Grade {item.grade}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={
-                          item.processing_status?.toUpperCase() === "GRADED"
-                            ? "bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full"
-                            : "text-gray-700 text-xs font-medium px-2.5 py-0.5 rounded-full"
-                        }
-                      >
-                        {item.processing_status?.toUpperCase() === "GRADED" ? "Grading Complete" : item.processing_status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <button
-                        disabled={loadingIds.includes(item.file_id) || item.is_sync === 1}
-                        onClick={() => handleSync(item.file_id)}
-                        className={`font-medium ${
-                          loadingIds.includes(item.file_id) || item.is_sync === 1
-                            ? "cursor-not-allowed text-slate-400"
-                            : "text-blue-600 hover:underline cursor-pointer"
-                        }`}
-                      >
-                        {item.is_sync === 1 ? 'Synced' : 'Start Synchronization'}
-                      </button>
-                    </td>
-                  </tr>
-                )))}
+                  .map((item, index) => {
+                    // --- VARIABEL STATUS ---
+                    const isRowProcessing = loadingIds.includes(item.file_id) || item.matching_task_status === 'PROCESSING';
+                    const isSynced = item.is_sync === 1 || item.matching_task_status === 'SUCCESS';
+                    const isFailed = item.matching_task_status === 'FAILED';
+
+                    return (
+                      <tr key={index} className="bg-white border-b border-slate-200 hover:bg-gray-50">
+                        <td className="px-6 py-4">{item.institution_name}</td>
+                        <td className="px-6 py-4">{item.original_filename}</td>
+                        <td className="px-6 py-4">{new Intl.NumberFormat('id-ID').format(item.row_count)}</td>
+                        <td className="px-6 py-4">
+                          <span className={`font-bold text-xs px-2 py-1 rounded ${getGradeClass(item.grade)}`}>
+                            Grade {item.grade}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={
+                              item.processing_status?.toUpperCase() === "GRADED"
+                                ? "bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full"
+                                : "text-gray-700 text-xs font-medium px-2.5 py-0.5 rounded-full"
+                            }
+                          >
+                            {item.processing_status?.toUpperCase() === "GRADED" ? "Grading Complete" : item.processing_status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <button
+                            disabled={isRowProcessing || isSynced}
+                            onClick={() => handleSync(item.file_id)}
+                            className={`font-medium ${
+                              isSynced 
+                                ? "cursor-not-allowed text-green-600" 
+                                : isRowProcessing
+                                  ? "cursor-not-allowed text-slate-400"
+                                  : isFailed
+                                    ? "text-red-600 hover:underline cursor-pointer"
+                                    : "text-blue-600 hover:underline cursor-pointer"
+                            }`}
+                          >
+                            {isSynced 
+                              ? 'Synced' 
+                              : isRowProcessing 
+                                ? 'Processing...' 
+                                : isFailed
+                                  ? 'Failed (Retry)'
+                                  : 'Start Synchronization'
+                            }
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>

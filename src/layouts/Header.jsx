@@ -18,6 +18,9 @@ const Header = () => {
     else if(location.pathname == '/history'){
       setTitle('Synchronization History')
     }
+    else if(location.pathname == '/audit-trail'){
+      setTitle('Audit Trail')
+    }
     
   }, [location])
     return (

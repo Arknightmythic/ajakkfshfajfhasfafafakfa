@@ -3,13 +3,15 @@ import {
   LayoutDashboard,
   UploadCloud,
   ListFilter,
-  History as HistoryIcon
+  History as HistoryIcon,
+  Activity as ActivityIcon
 } from 'lucide-react';
 
 const DashboardPage = lazy(() => import('../pages/Dashboard/Dashboard'));
 const UploadPage = lazy(() => import('../pages/UploadAndGrading/UploadAndGrading'));
 const BatchPage = lazy(() => import('../pages/BatchSynchronization/BatchSynchronization'));
 const HistoryPage = lazy(() => import('../pages/History/History'));
+const AuditTrailPage = lazy(() => import('../pages/AuditTrail/AuditTrail'));
 
 export const menu = [
   {
@@ -39,5 +41,12 @@ export const menu = [
     identifier: 'history',
     icon: HistoryIcon,
     component: HistoryPage,
+  },
+  {
+    title: 'Audit Trail',
+    path: '/audit-trail',
+    identifier: 'audit-trail',
+    icon: ActivityIcon,
+    component: AuditTrailPage,
   },
 ];
