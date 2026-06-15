@@ -2,6 +2,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import Chatbot from '../components/Chatbot';
 
 const SIDEBAR_EXPANDED_WIDTH = 'ml-64';
 const SIDEBAR_COLLAPSED_WIDTH = 'ml-16';
@@ -10,8 +11,7 @@ const Layout = () => {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [showChatbot, setShowChatbot] = useState(false);
-
-  const chatbotUrl = import.meta.env.VITE_CHATBOT_URL;
+  const [isChatbotExpanded, setIsChatbotExpanded] = useState(false);
 
   const hideHeaderRoutes = [
     '/batch-synchronization/preview',
@@ -59,25 +59,29 @@ const Layout = () => {
           <div
             style={{
               position: 'fixed',
-              bottom: '5rem',
+              // Selalu dipatok 6rem dari bawah agar tidak pernah menutupi tombol (1.5rem + 56px + gap)
+              bottom: '6rem', 
               right: '1.5rem',
-              width: '24rem',
-              height: '40rem',
-              borderRadius: '0.5rem',
+              // Lebar menyesuaikan ke arah kiri
+              left: isChatbotExpanded ? `calc(${collapsed ? '4rem' : '16rem'} + 1.5rem)` : 'auto',
+              width: isChatbotExpanded ? 'auto' : '28rem',
+              // Tinggi dasar, namun...
+              height: isChatbotExpanded ? 'calc(100vh - 12rem)' : '42rem',
+              // ...KUNCI UTAMA: Tidak akan pernah melebihi batas ini meskipun di-scale up (melindungi area Header)
+              maxHeight: 'calc(100vh - 12rem)', 
+              borderRadius: '0.75rem',
               overflow: 'hidden',
-              boxShadow: '0 0 12px rgba(0,0,0,0.15)',
+              boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
               zIndex: 9998,
               backgroundColor: 'white',
+              display: 'flex',
+              flexDirection: 'column',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             }}
           >
-            <iframe
-              src={chatbotUrl}
-              style={{
-                width: '100%',
-                height: '100%',
-                border: 'none',
-              }}
-              allow="microphone"
+            <Chatbot 
+              isExpanded={isChatbotExpanded} 
+              onToggleExpand={() => setIsChatbotExpanded(!isChatbotExpanded)} 
             />
           </div>
         )}
