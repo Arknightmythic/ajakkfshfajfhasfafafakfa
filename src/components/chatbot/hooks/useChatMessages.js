@@ -5,17 +5,19 @@ export function useChatMessages(activeSessionId, userId, updateSessionTitle) {
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  
   useEffect(() => {
     if (!activeSessionId) return;
     
     const fetchHistory = async () => {
+      // 1. Segera kosongkan pesan sebelumnya ketika berpindah sesi atau membuat sesi baru
+      setMessages([]);
+      setIsLoading(true);
+
       try {
-       const res = await axiosInstance.general.get(`/agent/conversations/${activeSessionId}`);
+        const res = await axiosInstance.general.get(`/agent/conversations/${activeSessionId}`);
         const data = res.data; 
         
         if (Array.isArray(data) && data.length > 0) {
-          
           const formatted = data.map(msg => ({
             id: msg.id,
             role: msg.role === 'human' ? 'user' : 'ai',
@@ -33,6 +35,15 @@ export function useChatMessages(activeSessionId, userId, updateSessionTitle) {
         }
       } catch (error) {
         console.error('Error fetching messages', error);
+        // 2. Berikan fallback pesan baru apabila API mengembalikan error (misal: sesi baru belum ada di DB)
+        setMessages([{
+          id: 'welcome',
+          role: 'ai',
+          content: 'Halo! Saya asisten AI Anda. Ada yang bisa saya bantu hari ini?',
+          processes: [],
+        }]);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -55,7 +66,6 @@ export function useChatMessages(activeSessionId, userId, updateSessionTitle) {
     try {
       const baseUrl = axiosInstance.general.defaults.baseURL || import.meta.env.VITE_BACKEND_URL;
 
-      
       const response = await fetch(`${baseUrl}/agent/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -86,7 +96,6 @@ export function useChatMessages(activeSessionId, userId, updateSessionTitle) {
             try {
               const data = JSON.parse(jsonStr);
 
-              
               if (data.step === 'TITLE' && data.content) {
                 updateSessionTitle(activeSessionId, data.content);
                 continue; 

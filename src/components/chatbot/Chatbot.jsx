@@ -5,7 +5,6 @@ import { useChatMessages } from './hooks/useChatMessages';
 import ChatSidebar from './components/ChatSidebar';
 import ChatMessage from './components/ChatMessage';
 
-// Tangkap props isExpanded dan onToggleExpand dari Layout
 export default function Chatbot({ isExpanded, onToggleExpand }) {
   const { 
     userId, 
@@ -26,12 +25,21 @@ export default function Chatbot({ isExpanded, onToggleExpand }) {
 
   const [input, setInput] = useState('');
   const messagesEndRef = useRef(null);
+  const textareaRef = useRef(null); // Ref untuk auto-resize text area
 
   const activeSessionTitle = sessions.find(s => s.id === activeSessionId)?.title || 'Chatbot';
 
+  // Autoscroll ke pesan terbawah
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Reset tinggi text-area saat pesan kosong (selesai disubmit)
+  useEffect(() => {
+    if (input === '' && textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
+  }, [input]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -39,8 +47,25 @@ export default function Chatbot({ isExpanded, onToggleExpand }) {
     setInput('');
   };
 
+  const handleInputChange = (e) => {
+    setInput(e.target.value);
+    // Auto-resize logic: Sesuaikan tinggi dengan scrollHeight
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e);
+    }
+  };
+
+  // Tambahkan overscroll-contain untuk mencegah background ikut di-scroll
   return (
-    <div className="flex flex-col h-full w-full bg-white overflow-hidden relative">
+    <div className="flex flex-col h-full w-full bg-white overflow-hidden relative overscroll-contain">
       
       <ChatSidebar 
         isOpen={isSidebarOpen} 
@@ -67,13 +92,11 @@ export default function Chatbot({ isExpanded, onToggleExpand }) {
           <Menu className="w-5 h-5" />
         </button>
         
-        {/* flex-1 agar teks mengambil seluruh sisa ruang di tengah */}
         <div className="overflow-hidden flex-1">
           <h2 className="text-base font-semibold text-white truncate">{activeSessionTitle}</h2>
           <p className="text-blue-200 text-[10px]">User: {userId}</p>
         </div>
 
-        {/* Tombol Expand/Collapse */}
         {onToggleExpand && (
           <button
             onClick={onToggleExpand}
@@ -85,29 +108,28 @@ export default function Chatbot({ isExpanded, onToggleExpand }) {
         )}
       </div>
 
-      {/* Message Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-gray-50">
+      {/* Message Area dengan overscroll-contain */}
+      <div className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-6 bg-gray-50">
         {messages.map((msg) => (
           <ChatMessage key={msg.id} msg={msg} isLoading={isLoading} />
         ))}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
-      <div className="p-3 bg-white border-t border-gray-200 z-10">
-        <form onSubmit={handleSubmit} className="flex items-end gap-2">
-          <div className="relative flex-1">
+      {/* Input Area (UI Diperbagus) */}
+      <div className="p-3 bg-white border-t border-gray-200 z-10 shadow-[0_-4px_10px_-4px_rgba(0,0,0,0.05)]">
+        <form onSubmit={handleSubmit} className="flex items-end gap-3">
+          <div className="relative flex-1 bg-gray-50 border border-gray-300 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 rounded-2xl transition-all duration-200 shadow-inner overflow-hidden">
             <textarea
+              ref={textareaRef}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSubmit(e);
-                }
-              }}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
               placeholder="Ketik pesan..."
-              className="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block p-3 resize-none max-h-32"
+              className={`w-full bg-transparent text-gray-900 text-sm block px-4 py-3 resize-none outline-none transition-all ${
+                // max-h-144px (sekitar 6 baris) jika expand, max-h-104px (sekitar 4 baris) jika collapse
+                isExpanded ? 'max-h-[144px]' : 'max-h-[104px]'
+              }`}
               rows={1}
               disabled={isLoading || !activeSessionId}
             />
@@ -115,7 +137,7 @@ export default function Chatbot({ isExpanded, onToggleExpand }) {
           <button
             type="submit"
             disabled={isLoading || !input.trim() || !activeSessionId}
-            className="flex-shrink-0 inline-flex justify-center items-center p-3 text-white bg-blue-600 rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="flex-shrink-0 inline-flex justify-center items-center p-3.5 text-white bg-blue-600 rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-sm hover:shadow-md"
           >
             {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
           </button>
