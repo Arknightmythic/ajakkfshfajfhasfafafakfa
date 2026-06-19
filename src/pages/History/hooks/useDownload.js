@@ -5,30 +5,22 @@ const useFileDownloader = () => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [error, setError] = useState(null);
 
-  const downloadFile = (match_type, metadata_id, file_format, filename_prefix) => {
+  // Parameter sekarang disesuaikan dengan API backend yang baru (file_id dan export_type)
+  const downloadFile = async (file_id, export_type) => {
     setIsDownloading(true);
     setError(null);
     try {
-      const baseURL = axiosInstance.general.defaults.baseURL;
+      // 1. Hit API untuk mendapatkan Presigned URL & Nama File Dinamis
+      const response = await axiosInstance.general.get(
+        `/files/${file_id}/export/download?type=${export_type}`
+      );
 
-      if (!baseURL) {
-        throw new Error("Base URL for 'general' instance is not configured.");
-      }
+      const { url, filename } = response.data;
 
-      const params = new URLSearchParams({
-        match_type,
-        metadata_id,
-        file_format,
-      });
-      
-      const url = `${baseURL}/history/download?${params.toString()}`;
-
+      // 2. Gunakan anchor element tersembunyi untuk langsung mendownload dari MinIO
       const link = document.createElement('a');
       link.href = url;
-      
-      const fileName = `${filename_prefix}_${match_type}.${file_format}`;
-      console.log(fileName)
-      link.setAttribute('download', fileName);
+      link.setAttribute('download', filename);
 
       document.body.appendChild(link);
       link.click();
@@ -36,7 +28,8 @@ const useFileDownloader = () => {
 
     } catch (err) {
       console.error("Download failed:", err);
-      setError("Gagal memulai unduhan.");
+      // Tampilkan pesan error spesifik dari backend jika ada
+      setError(err?.response?.data?.detail || "Gagal memulai unduhan.");
     } finally {
       setIsDownloading(false);
     }

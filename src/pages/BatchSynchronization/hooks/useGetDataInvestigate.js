@@ -1,21 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
 import axiosInstance from '../../../axios/axiosInstance';
 
-const getInvestigationData = async (metadata_id) => {
-  const res = await axiosInstance.general.get(`/sync/institution-detail/${metadata_id}`);
-  const allData = res.data.data;
-
-  const filtered = allData.filter(item => item.pivot_is_match === null);
-  console.log("res from backend:", filtered)
-
-  return filtered;
+const getInvestigationData = async (file_id, page) => {
+  const res = await axiosInstance.general.get(`/manual-review-data`, {
+    params: {
+      file_id: file_id,
+      page: page
+    }
+  });
+  
+  return res.data; 
 };
 
-const useGetInvestigationData = (metadata_id) => {
+const useGetInvestigationData = (file_id, page = 1) => {
   return useQuery({
-    queryKey: ["investigation", metadata_id],
-    queryFn: () => getInvestigationData(metadata_id),
-    enabled: !!metadata_id, 
+    queryKey: ["investigation", file_id, page],
+    queryFn: () => getInvestigationData(file_id, page),
+    enabled: !!file_id, 
   });
 };
 

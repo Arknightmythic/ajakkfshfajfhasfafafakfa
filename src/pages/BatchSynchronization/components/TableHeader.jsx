@@ -101,7 +101,7 @@ const TableHeader = ({
                   }`}
                 >
                   {(key === "institution_match_score" || key === "master_match_score" || key === "match_score") && typeof item[key] === "number"
-                    ? `${(item[key] * 100).toFixed(2)}%`
+                    ? `${(item[key]).toFixed(2)}%`
                     : item[key]}
                 </td>
               ))}

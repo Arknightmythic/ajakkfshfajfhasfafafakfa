@@ -1,17 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 import axiosInstance from '../../../axios/axiosInstance';
 
-const getPreviewData = async (metadata_id) => {
-  const res = await axiosInstance.general.get(`/sync/preview/${metadata_id}`);
-  console.log("line 6", res.data.data)
+const getPreviewData = async (file_id) => {
+  const res = await axiosInstance.general.get(`/preview-data/${file_id}`);
+  
   return res.data.data; 
 };
 
-const useGetPreviewData = (metadata_id) => {
+const useGetPreviewData = (file_id) => {
   return useQuery({
-    queryKey: ["investigation", metadata_id],
-    queryFn: () => getPreviewData(metadata_id),
-    enabled: !!metadata_id, 
+    // Mengubah query key dari "investigation" menjadi "previewData" agar relevan
+    queryKey: ["previewData", file_id],
+    queryFn: () => getPreviewData(file_id),
+    enabled: !!file_id, 
   });
 };
 

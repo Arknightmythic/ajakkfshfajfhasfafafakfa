@@ -158,9 +158,9 @@ const BatchSynchronization = () => {
               className="w-full sm:w-auto px-3 py-2 border border-slate-300 rounded-md text-sm"
             >
               <option value="1,2,3">All Status</option>
-              <option value="1">Completed</option>
+              <option value="1">In Progress</option>
               <option value="2">Awaiting Action</option>
-              <option value="3">In Progress</option>
+              <option value="3">Completed</option>
             </select>
           </div>
 

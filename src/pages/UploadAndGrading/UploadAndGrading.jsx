@@ -125,19 +125,23 @@ const UploadAndGrading = () => {
     try {
       const result = await syncByGrade({ id }); 
       
-      if (result && result.message) {
+      // PERBAIKAN: Ubah validasi menjadi mengecek matching_task_status
+      if (result && result.matching_task_status === 'SUCCESS') {
         SuccessPopOut(
           "Matching Completed",
           "success",
-          `${result.message}. Matched: ${result.matched_rows?.toLocaleString() || 0} baris | Unmatched: ${result.unmatched_rows?.toLocaleString() || 0} baris.`
+          `${result.message || 'Sinkronisasi berhasil'}. Matched: ${result.matched_rows?.toLocaleString() || 0} baris | Unmatched: ${result.unmatched_rows?.toLocaleString() || 0} baris.`
         );
         refetch(); // Merefresh tabel agar tombol berubah menjadi 'Synced'
       } else {
+        // Hanya muncul jika status bukan SUCCESS tapi berhasil keluar dari loop
+        console.warn("Sync result:", result);
         ErrorPopOut();
       }
     } catch (err) {
       console.error("Failed Sync:", err);
-      ErrorPopOut();
+      // Opsi: Bisa gunakan err.message untuk membedakan error jaringan vs server
+      ErrorPopOut(); 
     } finally {
       setLoadingIds((prev) => prev.filter((x) => x !== id));
     }

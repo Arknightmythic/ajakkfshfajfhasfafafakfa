@@ -7,10 +7,16 @@ const syncByGrade = async ({ id }) => {
 
   // 2. Polling ke Database setiap 3 detik
   return new Promise((resolve, reject) => {
+    let errorCount = 0;
+    const MAX_ERRORS = 5; // Toleransi maksimal 5 kali gagal request berturut-turut
+
     const interval = setInterval(async () => {
       try {
         const statusRes = await axiosInstance.general.get(`/match/status/${id}`);
         const currentStatus = statusRes.data.matching_task_status;
+
+        // Reset error count jika request berhasil nembus
+        errorCount = 0;
 
         if (currentStatus === 'SUCCESS') {
           clearInterval(interval);
@@ -22,8 +28,14 @@ const syncByGrade = async ({ id }) => {
         // Jika PROCESSING atau IDLE, biarkan interval terus berjalan...
         
       } catch (err) {
-        clearInterval(interval);
-        reject(err);
+        console.warn("Terjadi kendala jaringan saat polling:", err.message);
+        errorCount++;
+        
+        // Hanya hentikan polling jika gagal berturut-turut melebihi batas
+        if (errorCount >= MAX_ERRORS) {
+          clearInterval(interval);
+          reject(new Error("Gagal terhubung ke server setelah beberapa kali percobaan."));
+        }
       }
     }, 3000); 
   });

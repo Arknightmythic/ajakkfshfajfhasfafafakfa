@@ -1,4 +1,4 @@
-import { ArrowLeft, Loader2, CircleCheck } from "lucide-react";
+import { ArrowLeft, Loader2, CircleCheck, Sparkles } from "lucide-react";
 import TableHeader from "./TableHeader";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
@@ -6,44 +6,42 @@ import DangerPopOut from "../../../components/PopOut/DangerPopOut";
 import { SuccessPopOut } from "../../../components/PopOut/SuccessPopOut";
 import useGetInvestigationData from "../hooks/useGetDataInvestigate";
 import usePostMatchData from "../hooks/usePostMatchData";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "../../../axios/axiosInstance";
-import { Sparkles } from 'lucide-react';
 
 const InvestigatePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { metadata_id, institutionName, statusGrade } = location.state || {};
+  // Alias metadata_id menjadi file_id agar konsisten dengan payload API
+  const { metadata_id: file_id, institutionName, statusGrade } = location.state || {};
+  const queryClient = useQueryClient();
 
+  const [page, setPage] = useState(1);
   const [selectedIndexes, setSelectedIndexes] = useState([]);
   const [selectedMatchIndex, setSelectedMatchIndex] = useState(null);
   const [loadingOverlay, setLoadingOverlay] = useState(false);
 
-  const { data, isLoading, error } = useGetInvestigationData(metadata_id);
-  const { mutateAsync: postMatchData } = usePostMatchData(metadata_id);
+  // Fetch API dengan parameter page
+  const { data: responseData, isLoading, error } = useGetInvestigationData(file_id, page);
+  const { mutateAsync: postMatchData } = usePostMatchData();
+
+  // PERBAIKAN: Bungkus dataList dengan useMemo agar referensi memori stabil
+  const dataList = useMemo(() => responseData?.data || [], [responseData?.data]);
+  
+  // Ekstrak metadata pagination
+  const totalRows = responseData?.total_rows || 0;
+  const totalPages = responseData?.total_pages || 1;
+  const hasNext = responseData?.has_next || false;
+  const hasPrev = responseData?.has_prev || false;
 
   const sortedData = useMemo(() => {
-    if (!data) return [];
-    return [...data].sort((a, b) => {
-      const aHas = !!a.pivot_reason;
-      const bHas = !!b.pivot_reason;
+    if (!dataList || dataList.length === 0) return [];
+    return [...dataList].sort((a, b) => {
+      const aHas = !!a.institution?.reason;
+      const bHas = !!b.institution?.reason;
       return bHas - aHas;
     });
-  }, [data]);
-
-  console.log("sorted data", sortedData)
-
-  useEffect(() => {
-    if (sortedData && sortedData.length > 0) {
-      const problematicIndex = sortedData.findIndex(item => item === null || item === undefined);
-      
-      if (problematicIndex > -1) {
-        console.error(`DITEMUKAN! Ada item null/undefined di dalam 'sortedData' pada index: ${problematicIndex}`);
-      } else {
-        console.log("Pemeriksaan selesai: Tidak ada item null/undefined di tingkat atas array 'sortedData'.");
-      }
-    }
-  }, [sortedData]); 
+  }, [dataList]); // <-- Sekarang dependency ini sudah aman
 
   const selectedMatches = useMemo(() => {
     if (selectedIndexes.length === 0) return sortedData;
@@ -71,12 +69,21 @@ const InvestigatePage = () => {
     if (isMatchButtonDisabled || !selectedSource) return;
     const selected = selectedMatches[selectedMatchIndex];
     setLoadingOverlay(true);
+    
     try {
+      // Menentukan match_status: 4 untuk manual match, 5 untuk manual unmatch
+      const statusValue = type === "match" ? 4 : 5;
+
       await postMatchData({
-        institution_id: selected.pivot_institution_id.toString(),
-        nik: selected.master_nik,
-        match_type: type,
+        file_id: file_id,
+        id_incoming: selected.institution.id.toString(), // id_incoming dari sisi institution
+        match_status: statusValue,
       });
+      
+      // Reset seleksi setelah sukses dan refetch data
+      setSelectedIndexes([]);
+      setSelectedMatchIndex(null);
+      queryClient.invalidateQueries(["investigation", file_id, page]);
     } finally {
       setLoadingOverlay(false);
     }
@@ -84,7 +91,8 @@ const InvestigatePage = () => {
 
   const { mutate: markAsDone, isPending } = useMutation({
     mutationFn: async () => {
-      await axiosInstance.general.post(`/sync/mark-as-done/${metadata_id}`);
+      // Menggunakan endpoint PATCH API terbaru untuk mark as completed
+      await axiosInstance.general.patch(`/mark-as-completed/files/${file_id}`);
     },
     onSuccess: () => {
       SuccessPopOut(
@@ -142,15 +150,18 @@ const InvestigatePage = () => {
   };
   const color = colorClassMap[summary?.color];
 
-  if (isLoading) {
+  if (isLoading && dataList.length === 0) {
     return (
       <div className="p-6 flex items-center justify-center min-h-[400px]">
-        <p className="font-medium animate-pulse">Loading data...</p>
+        <div className="text-center">
+          <Loader2 className="animate-spin w-8 h-8 mx-auto mb-4 text-blue-600" />
+          <p className="font-medium animate-pulse text-blue-600">Loading data...</p>
+        </div>
       </div>
     );
   }
 
-  if (error || !data) {
+  if (error || !responseData) {
     return (
       <div className="p-6">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -166,7 +177,7 @@ const InvestigatePage = () => {
   return (
     <div className="relative">
       {(loadingOverlay || isPending) && (
-        <div className="absolute inset-0 bg-white/10 backdrop-blur-sm z-30 flex items-center justify-center rounded-lg">
+        <div className="absolute inset-0 bg-white/50 backdrop-blur-sm z-30 flex items-center justify-center rounded-lg">
           <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
         </div>
       )}
@@ -200,7 +211,7 @@ const InvestigatePage = () => {
         </button>
       </div>
 
-      <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
+      <div className="bg-white p-4 rounded-lg shadow-sm mb-6 border border-slate-200">
         <h2 className="text-2xl font-bold">Investigating: {institutionName}</h2>
       </div>
 
@@ -213,22 +224,17 @@ const InvestigatePage = () => {
         </div>
       )}
 
-      <div className="bg-white p-6 rounded-xl shadow-sm">
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Kolom Kiri - Source Data */}
           <div>
             <h3 className="font-semibold text-lg mb-2">
               Source Data (from Institution)
             </h3>
             <div className="border border-slate-300 rounded-lg overflow-hidden">
-              <div className="overflow-x-auto max-h-[40vh]">
+              <div className="overflow-x-auto max-h-[40vh] custom-scrollbar">
                 <TableHeader
-                  data={sortedData.filter(Boolean).map((d) => ({
-                    ...Object.fromEntries(
-                      Object.entries(d).filter(([key]) =>
-                        key.startsWith("institution_")
-                      )
-                    ),
-                  }))}
+                  data={sortedData.map((d) => d.institution)}
                   type="investigate"
                   grade={statusGrade}
                   selectionType="radio"
@@ -240,7 +246,7 @@ const InvestigatePage = () => {
             </div>
             <div className="mt-4 text-right">
               <button
-                className={`px-4 py-2 rounded-md text-sm ${
+                className={`px-4 py-2 rounded-md text-sm transition-colors ${
                   isMatchButtonDisabled
                     ? "bg-red-300 text-white cursor-not-allowed"
                     : "bg-red-500 text-white hover:bg-red-600 cursor-pointer"
@@ -253,20 +259,15 @@ const InvestigatePage = () => {
             </div>
           </div>
 
+          {/* Kolom Kanan - Potential Matches */}
           <div>
             <h3 className="font-semibold text-lg mb-2">
               Potential Matches (from DUKCAPIL)
             </h3>
             <div className="border border-slate-300 rounded-lg overflow-hidden">
-              <div className="overflow-x-auto max-h-[40vh]">
+              <div className="overflow-x-auto max-h-[40vh] custom-scrollbar">
                 <TableHeader
-                  data={selectedMatches.filter(Boolean).map((d) => ({
-                    ...Object.fromEntries(
-                      Object.entries(d).filter(([key]) =>
-                        key.startsWith("master_")
-                      )
-                    ),
-                  }))}
+                  data={selectedMatches.map((d) => d.master).filter(Boolean)}
                   type="matches"
                   selectionType="radio"
                   selectedRadioIndex={selectedMatchIndex}
@@ -283,14 +284,14 @@ const InvestigatePage = () => {
                 </div>
                 <p className="text-sm text-slate-700 mt-1">
                   {selectedMatchIndex != null
-                    ? selectedMatches[selectedMatchIndex]?.pivot_reason
-                    : selectedMatches[0]?.pivot_reason}
+                    ? selectedMatches[selectedMatchIndex]?.institution?.reason
+                    : selectedMatches[0]?.institution?.reason}
                 </p>
               </div>
             )}
             <div className="mt-4 text-right">
               <button
-                className={`px-4 py-2 rounded-md text-sm ${
+                className={`px-4 py-2 rounded-md text-sm transition-colors ${
                   isMatchButtonDisabled
                     ? "bg-blue-300 text-white cursor-not-allowed"
                     : "bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"
@@ -303,6 +304,34 @@ const InvestigatePage = () => {
             </div>
           </div>
         </div>
+
+        {/* --- Paginasi Footer --- */}
+        {dataList.length > 0 && (
+          <div className="flex justify-between items-center pt-6 mt-4 border-t border-slate-200">
+            <span className="text-sm text-slate-600 font-medium">
+              Showing Total: {new Intl.NumberFormat('id-ID').format(totalRows)} records
+            </span>
+            <div className="flex items-center gap-2 mr-7">
+              <button
+                disabled={!hasPrev}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                className="px-3 py-1.5 border border-slate-300 rounded text-sm hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Previous
+              </button>
+              <span className="px-4 py-1.5 text-sm font-medium text-slate-700">
+                Page {page} of {totalPages}
+              </span>
+              <button
+                disabled={!hasNext}
+                onClick={() => setPage((p) => p + 1)}
+                className="px-3 py-1.5 border border-slate-300 rounded text-sm hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
