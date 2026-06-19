@@ -2,7 +2,8 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
-import Chatbot from '../components/Chatbot';
+import Chatbot from '../components/chatbot/Chatbot';
+
 
 const SIDEBAR_EXPANDED_WIDTH = 'ml-64';
 const SIDEBAR_COLLAPSED_WIDTH = 'ml-16';
@@ -79,7 +80,7 @@ const Layout = () => {
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             }}
           >
-            <Chatbot 
+            <Chatbot
               isExpanded={isChatbotExpanded} 
               onToggleExpand={() => setIsChatbotExpanded(!isChatbotExpanded)} 
             />
