@@ -9,10 +9,10 @@ const Dashboard = () => {
   const gradeChartInstance = useRef(null);
   const navigate = useNavigate();
   
-  // Mengambil data dari hook baru
+  
   const { dashboardData, loading, error } = useDashboard();
 
-  // Memetakan data summary dari API
+  
   const computedData = useMemo(() => {
     if (!dashboardData?.data?.summary) return null;
 
@@ -31,11 +31,11 @@ const Dashboard = () => {
             summary.total_grade_e || 0,
           ],
           backgroundColor: [
-            '#86efac', // A - Green
-            '#fde047', // B - Yellow
-            '#fdba74', // C - Orange
-            '#d8b4fe', // D - Purple
-            '#fca5a5', // E - Red
+            '#86efac', 
+            '#fde047', 
+            '#fdba74', 
+            '#d8b4fe', 
+            '#fca5a5', 
           ],
         },
       ],
@@ -51,7 +51,7 @@ const Dashboard = () => {
     };
   }, [dashboardData]);
 
-  // Ekstrak recent files langsung dari payload API
+  
   const recentFiles = useMemo(() => {
     return dashboardData?.data?.recent_sync_files || [];
   }, [dashboardData]);
@@ -60,20 +60,17 @@ const Dashboard = () => {
     !computedData?.gradeDistribution ||
     !computedData.gradeDistribution.datasets?.[0]?.data?.some((val) => val > 0);
 
-  // Efek untuk me-render Chart.js
+  
   useEffect(() => {
-    if (gradeChartInstance.current) {
-      gradeChartInstance.current.destroy();
-      gradeChartInstance.current = null;
-    }
-
-    if (computedData?.gradeDistribution && gradeBarChartRef.current && !loading) {
+    
+    if (gradeBarChartRef.current && !gradeChartInstance.current && !loading && !isGradeDataEmpty) {
       const canvas = gradeBarChartRef.current;
       const ctx = canvas.getContext('2d');
 
       try {
         gradeChartInstance.current = new Chart(ctx, {
           type: 'bar',
+          
           data: computedData.gradeDistribution,
           options: {
             responsive: true,
@@ -115,13 +112,24 @@ const Dashboard = () => {
       }
     }
 
-    return () => {
+    
+   return () => {
       if (gradeChartInstance.current) {
         gradeChartInstance.current.destroy();
         gradeChartInstance.current = null;
       }
     };
-  }, [computedData, loading]);
+  }, [loading, isGradeDataEmpty, computedData]); 
+
+  
+  useEffect(() => {
+    
+    if (gradeChartInstance.current && computedData?.gradeDistribution) {
+      gradeChartInstance.current.data = computedData.gradeDistribution;
+      gradeChartInstance.current.update(); 
+    }
+  }, [computedData]); 
+
 
   const statusColor = {
     "awaiting action": "bg-red-100 text-red-800",

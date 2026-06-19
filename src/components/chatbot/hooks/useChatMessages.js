@@ -1,25 +1,26 @@
 import { useState, useEffect } from 'react';
+import axiosInstance from '../../../axios/axiosInstance';
 
 export function useChatMessages(activeSessionId, userId, updateSessionTitle) {
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch History saat activeSessionId berubah
+  
   useEffect(() => {
     if (!activeSessionId) return;
     
     const fetchHistory = async () => {
       try {
-        const res = await fetch(`http://localhost:9191/agent/conversations/${activeSessionId}`);
-        const data = await res.json();
+       const res = await axiosInstance.general.get(`/agent/conversations/${activeSessionId}`);
+        const data = res.data; 
         
         if (Array.isArray(data) && data.length > 0) {
-          // Map response backend (human/ai) ke format UI (user/ai)
+          
           const formatted = data.map(msg => ({
             id: msg.id,
             role: msg.role === 'human' ? 'user' : 'ai',
             content: msg.content,
-            processes: [] // History lama tidak menyimpan detail proses
+            processes: [] 
           }));
           setMessages(formatted);
         } else {
@@ -52,7 +53,10 @@ export function useChatMessages(activeSessionId, userId, updateSessionTitle) {
     ]);
 
     try {
-      const response = await fetch('http://localhost:9191/agent/chat', {
+      const baseUrl = axiosInstance.general.defaults.baseURL || import.meta.env.VITE_BACKEND_URL;
+
+      
+      const response = await fetch(`${baseUrl}/agent/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -61,7 +65,6 @@ export function useChatMessages(activeSessionId, userId, updateSessionTitle) {
           user_id: userId,
         }),
       });
-
       const reader = response.body.getReader();
       const decoder = new TextDecoder('utf-8');
       let isDone = false;
@@ -83,10 +86,10 @@ export function useChatMessages(activeSessionId, userId, updateSessionTitle) {
             try {
               const data = JSON.parse(jsonStr);
 
-              // Update Title jika ada step TITLE
+              
               if (data.step === 'TITLE' && data.content) {
                 updateSessionTitle(activeSessionId, data.content);
-                continue; // Lanjut ke data berikutnya
+                continue; 
               }
 
               setMessages((prev) =>
@@ -109,7 +112,7 @@ export function useChatMessages(activeSessionId, userId, updateSessionTitle) {
                       const runningIndex = newProcesses.findIndex(p => p.status === 'running');
                       if (runningIndex !== -1) {
                         newProcesses[runningIndex].status = 'done';
-                        newProcesses[runningIndex].result = data.content; // Simpan content untuk di-expand
+                        newProcesses[runningIndex].result = data.content; 
                       } else if (newProcesses.length > 0) {
                         newProcesses[newProcesses.length - 1].status = 'done';
                         newProcesses[newProcesses.length - 1].result = data.content;
