@@ -1,49 +1,78 @@
 import { useMutation } from '@tanstack/react-query';
 import axiosInstance from '../../../axios/axiosInstance';
 
-const syncByGrade = async ({ id }) => {
-  // 1. Tembak POST untuk mengubah status DB menjadi PROCESSING
+const syncByGrade = async ({ id, onLog }) => {
+  
   await axiosInstance.general.post(`/match/?file_id=${id}`, null);
-
-  // 2. Polling ke Database setiap 3 detik
   return new Promise((resolve, reject) => {
-    let errorCount = 0;
-    const MAX_ERRORS = 5; // Toleransi maksimal 5 kali gagal request berturut-turut
+    const baseURL = axiosInstance.general.defaults.baseURL;
+    const url     = `${baseURL}/match/stream/${id}`;
 
-    const interval = setInterval(async () => {
-      try {
-        const statusRes = await axiosInstance.general.get(`/match/status/${id}`);
-        const currentStatus = statusRes.data.matching_task_status;
+    const response$ = fetch(url, {
+      method : 'GET',
+      headers: { Accept: 'text/event-stream' },
+    });
 
-        // Reset error count jika request berhasil nembus
-        errorCount = 0;
+    let finalStatus = null; 
 
-        if (currentStatus === 'SUCCESS') {
-          clearInterval(interval);
-          resolve(statusRes.data); 
-        } else if (currentStatus === 'FAILED') {
-          clearInterval(interval);
-          reject(new Error("Proses matching gagal di background server."));
+    response$
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`SSE connection failed: ${response.status}`);
         }
-        // Jika PROCESSING atau IDLE, biarkan interval terus berjalan...
+
+        const reader  = response.body.getReader();
+        const decoder = new TextDecoder();
+        let   buffer  = '';
+
         
-      } catch (err) {
-        console.warn("Terjadi kendala jaringan saat polling:", err.message);
-        errorCount++;
-        
-        // Hanya hentikan polling jika gagal berturut-turut melebihi batas
-        if (errorCount >= MAX_ERRORS) {
-          clearInterval(interval);
-          reject(new Error("Gagal terhubung ke server setelah beberapa kali percobaan."));
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          
+          const parts = buffer.split('\n\n');
+          buffer = parts.pop(); 
+
+          for (const part of parts) {
+            if (!part.startsWith('data: ')) continue;
+
+            let payload;
+            try {
+              payload = JSON.parse(part.substring(6));
+            } catch {
+              continue;
+            }
+
+            
+            if (payload.message === '__DONE__') {
+              finalStatus = payload.level; 
+              await reader.cancel();
+              break;
+            }
+            if (onLog) onLog(payload);
+          }
+          if (finalStatus !== null) break;
         }
-      }
-    }, 3000); 
+
+        
+        if (finalStatus === 'SUCCESS') {
+          resolve({ matching_task_status: 'SUCCESS', file_id: id });
+        } else {
+          reject(new Error('Proses matching gagal di server. Cek log untuk detail.'));
+        }
+      })
+      .catch((err) => {
+        reject(new Error(`Gagal terhubung ke stream: ${err.message}`));
+      });
   });
 };
 
 const useSync = () => {
   return useMutation({
-    mutationFn: syncByGrade,
+    mutationFn: ({ id, onLog }) => syncByGrade({ id, onLog }),
   });
 };
 

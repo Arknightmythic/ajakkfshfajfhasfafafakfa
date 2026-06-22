@@ -1,5 +1,15 @@
-import { Loader2, FileText, Trash, CheckCircle2, XCircle, FileClock } from "lucide-react";
-import { useState, } from "react";
+import {
+  Loader2,
+  FileText,
+  Trash,
+  CheckCircle2,
+  XCircle,
+  FileClock,
+  Terminal,
+  X,
+  List,
+} from "lucide-react";
+import { useState, Fragment } from "react";
 import useUploadFile from "./hooks/useUploadFile";
 import useGetData from "./hooks/useGetData";
 import useSync from "./hooks/useSync";
@@ -8,39 +18,59 @@ import { SuccessPopOut } from "../../components/PopOut/SuccessPopOut";
 
 const UploadAndGrading = () => {
   const [institution, setInstitution] = useState("");
-  const [selectedFiles, setSelectedFiles] = useState([]); 
+  const [selectedFiles, setSelectedFiles] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  
-  // State untuk menampung progress setiap file yang di-upload
-  // Format: { "nama_file.csv": { progress: 0, status: "", isDone: false, show: true } }
+  const [selectedLogId, setSelectedLogId] = useState(null);
+
+  // State progress upload per file
   const [fileProgresses, setFileProgresses] = useState({});
 
+  // State log matching per file_id
+  // Format: { [file_id]: { logs: [{message, level, ts}], isDone: bool, isFailed: bool } }
+  const [matchingLogs, setMatchingLogs] = useState({});
+
   const { uploadFile } = useUploadFile();
-  const { data, loading, error, refetch, page, setPage, totalPages, hasNext, hasPrev } = useGetData();
+  const {
+    data,
+    loading,
+    error,
+    refetch,
+    page,
+    setPage,
+    totalPages,
+    hasNext,
+    hasPrev,
+  } = useGetData();
 
   const getGradeClass = (grade) => {
     switch (grade) {
-      case 'A': return 'bg-green-200 text-green-800';
-      case 'B': return 'bg-yellow-200 text-yellow-800';
-      case 'C': return 'bg-orange-200 text-orange-800';
-      case 'D': return 'bg-purple-200 text-purple-800';
-      case 'E': return 'bg-red-200 text-red-800';
-      default: return 'bg-gray-200 text-gray-800';
+      case "A":
+        return "bg-green-200 text-green-800";
+      case "B":
+        return "bg-yellow-200 text-yellow-800";
+      case "C":
+        return "bg-orange-200 text-orange-800";
+      case "D":
+        return "bg-purple-200 text-purple-800";
+      case "E":
+        return "bg-red-200 text-red-800";
+      default:
+        return "bg-gray-200 text-gray-800";
     }
   };
 
+  // ── Upload handler ──────────────────────────────────────────
   const handleUpload = async () => {
     setIsProcessing(true);
 
-    // Inisialisasi progress untuk masing-masing file yang akan diupload
     const initialProgresses = {};
-    selectedFiles.forEach(file => {
-      initialProgresses[file.name] = { 
-        progress: 0, 
-        status: "Menunggu giliran...", 
-        isDone: false, 
+    selectedFiles.forEach((file) => {
+      initialProgresses[file.name] = {
+        progress: 0,
+        status: "Menunggu giliran...",
+        isDone: false,
         isError: false,
-        show: true 
+        show: true,
       };
     });
     setFileProgresses(initialProgresses);
@@ -48,32 +78,31 @@ const UploadAndGrading = () => {
     const handleStreamProgress = (eventData) => {
       const { step, message, filename } = eventData;
 
-      // Update hanya state milik filename yang bersangkutan
       if (filename) {
-        setFileProgresses(prev => {
-          // Fallback jika state untuk file belum ada
-          const currentFile = prev[filename] || { progress: 0, status: "", isDone: false, show: true };
+        setFileProgresses((prev) => {
+          const currentFile = prev[filename] || {
+            progress: 0,
+            status: "",
+            isDone: false,
+            show: true,
+          };
           let newProgress = currentFile.progress;
           let isDone = currentFile.isDone;
           let isError = currentFile.isError;
 
-          if (step === 'READING') newProgress = 20;
-          else if (step === 'CONVERTING') newProgress = 40;
-          else if (step === 'UPLOADING') newProgress = 60;
-          else if (step === 'METADATA') newProgress = 80;
-          else if (step === 'GRADING') newProgress = 90;
-          else if (step === 'ERROR') {
-              isError = true;
-          }
-          else if (step === 'DONE_FILE') {
+          if (step === "READING") newProgress = 20;
+          else if (step === "CONVERTING") newProgress = 40;
+          else if (step === "UPLOADING") newProgress = 60;
+          else if (step === "METADATA") newProgress = 80;
+          else if (step === "GRADING") newProgress = 90;
+          else if (step === "ERROR") isError = true;
+          else if (step === "DONE_FILE") {
             newProgress = 100;
             isDone = true;
-            
-            // Set Timer 3 detik untuk menghilangkan progress bar ini secara individu
             setTimeout(() => {
-              setFileProgresses(p => ({
+              setFileProgresses((p) => ({
                 ...p,
-                [filename]: { ...p[filename], show: false }
+                [filename]: { ...p[filename], show: false },
               }));
             }, 3000);
           }
@@ -85,14 +114,18 @@ const UploadAndGrading = () => {
               progress: newProgress,
               status: message,
               isDone,
-              isError
-            }
+              isError,
+            },
           };
         });
       }
     };
 
-    const success = await uploadFile(selectedFiles, institution, handleStreamProgress);
+    const success = await uploadFile(
+      selectedFiles,
+      institution,
+      handleStreamProgress,
+    );
 
     if (success) {
       SuccessPopOut("Completed", "success", "Semua file berhasil diproses.");
@@ -102,46 +135,94 @@ const UploadAndGrading = () => {
     } else {
       ErrorPopOut();
     }
-    
-    setIsProcessing(false); 
+
+    setIsProcessing(false);
   };
 
   const handleRemoveFile = (indexToRemove) => {
-    setSelectedFiles(prev => prev.filter((_, index) => index !== indexToRemove));
+    setSelectedFiles((prev) =>
+      prev.filter((_, index) => index !== indexToRemove),
+    );
   };
 
+  // ── Sync handler ────────────────────────────────────────────────────────────
   const { mutateAsync: syncByGrade } = useSync();
   const [loadingIds, setLoadingIds] = useState([]);
 
-  // Fungsi Sync tidak lagi menggunakan param 'grade'
   const handleSync = async (id) => {
     setLoadingIds((prev) => [...prev, id]);
+
+    // Inisialisasi panel log untuk file ini
+    setMatchingLogs((prev) => ({
+      ...prev,
+      [id]: { logs: [], isDone: false, isFailed: false },
+    }));
+
     SuccessPopOut(
       "Synchronizing...",
       "info",
-      "Proses pencocokan data sedang berjalan..."
+      "Proses pencocokan data sedang berjalan...",
     );
 
+    // Callback dipanggil tiap ada log baru dari SSE
+    const handleLog = (logEntry) => {
+      setMatchingLogs((prev) => {
+        const current = prev[id] || {
+          logs: [],
+          isDone: false,
+          isFailed: false,
+        };
+        return {
+          ...prev,
+          [id]: {
+            ...current,
+            logs: [...current.logs, logEntry],
+          },
+        };
+      });
+    };
+
     try {
-      const result = await syncByGrade({ id }); 
-      
-      // PERBAIKAN: Ubah validasi menjadi mengecek matching_task_status
-      if (result && result.matching_task_status === 'SUCCESS') {
+      const result = await syncByGrade({ id, onLog: handleLog });
+
+      if (result && result.matching_task_status === "SUCCESS") {
+        // Tandai log panel sebagai selesai
+        setMatchingLogs((prev) => ({
+          ...prev,
+          [id]: { ...prev[id], isDone: true },
+        }));
+
         SuccessPopOut(
           "Matching Completed",
           "success",
-          `${result.message || 'Sinkronisasi berhasil'}. Matched: ${result.matched_rows?.toLocaleString() || 0} baris | Unmatched: ${result.unmatched_rows?.toLocaleString() || 0} baris.`
+          `Sinkronisasi berhasil.`,
         );
-        refetch(); // Merefresh tabel agar tombol berubah menjadi 'Synced'
+        refetch();
       } else {
-        // Hanya muncul jika status bukan SUCCESS tapi berhasil keluar dari loop
         console.warn("Sync result:", result);
         ErrorPopOut();
       }
     } catch (err) {
       console.error("Failed Sync:", err);
-      // Opsi: Bisa gunakan err.message untuk membedakan error jaringan vs server
-      ErrorPopOut(); 
+
+      // Tandai log panel sebagai gagal
+      setMatchingLogs((prev) => ({
+        ...prev,
+        [id]: {
+          ...(prev[id] || { logs: [] }),
+          isFailed: true,
+          logs: [
+            ...(prev[id]?.logs || []),
+            {
+              message: err.message,
+              level: "ERROR",
+              ts: new Date().toISOString(),
+            },
+          ],
+        },
+      }));
+
+      ErrorPopOut();
     } finally {
       setLoadingIds((prev) => prev.filter((x) => x !== id));
     }
@@ -149,17 +230,18 @@ const UploadAndGrading = () => {
 
   if (error) {
     return (
-      <div className='p-6'>
-        <div className='bg-red-50 border border-red-200 rounded-lg p-4'>
-          <h3 className='text-red-800 font-medium'>Error Loading Page</h3>
-          <p className='text-red-600 mt-1'>{error.message}</p>
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <h3 className="text-red-800 font-medium">Error Loading Page</h3>
+          <p className="text-red-600 mt-1">{error.message}</p>
         </div>
       </div>
     );
   }
 
-  // Menggunakan argumen tunggal (entry) untuk menghindari error unused variable "_" 
-  const visibleProgresses = Object.entries(fileProgresses).filter((entry) => entry[1].show);
+  const visibleProgresses = Object.entries(fileProgresses).filter(
+    (entry) => entry[1].show,
+  );
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -167,179 +249,199 @@ const UploadAndGrading = () => {
       <div className="bg-white p-6 rounded-xl shadow-sm flex flex-col">
         <h3 className="font-semibold text-lg mb-4">1. Upload Data File</h3>
         <div className="mb-4">
-            <label className="block text-sm font-medium text-slate-700">Ministry / Institution Name</label>
-            <input
-              disabled={isProcessing} 
-              className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-xs focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
-              placeholder="e.g., Ministry of Health"
-              value={institution}
-              onChange={(e) => setInstitution(e.target.value)}
+          <label className="block text-sm font-medium text-slate-700">
+            Ministry / Institution Name
+          </label>
+          <input
+            disabled={isProcessing}
+            className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-xs focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
+            placeholder="e.g., Ministry of Health"
+            value={institution}
+            onChange={(e) => setInstitution(e.target.value)}
           />
         </div>
-        <div className={`mt-2 flex justify-center rounded-lg border border-dashed px-6 py-10 transition-colors ${isProcessing ? 'border-slate-200 bg-slate-50' : 'border-slate-900/25'}`}>
+        <div
+          className={`mt-2 flex justify-center rounded-lg border border-dashed px-6 py-10 transition-colors ${isProcessing ? "border-slate-200 bg-slate-50" : "border-slate-900/25"}`}
+        >
           <div className="text-center">
-            <i data-lucide="file-up" className="mx-auto h-12 w-12 text-slate-300"></i>
-            <div className="mt-4 flex text-sm leading-6 text-slate-600 justify-center">
-              <label className={`relative rounded-md font-semibold focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 ${isProcessing ? 'text-slate-400 cursor-not-allowed' : 'bg-white text-blue-600 focus-within:ring-blue-600 hover:text-blue-500 cursor-pointer'}`}>
-                <span>Choose files</span>
-                <input
+            {isProcessing ? (
+              <Loader2 className="mx-auto h-10 w-10 text-slate-400 animate-spin" />
+            ) : (
+              <FileText className="mx-auto h-10 w-10 text-slate-400" />
+            )}
+            <div className="mt-4 flex text-sm text-slate-600 justify-center">
+              <label
+                className={`relative cursor-pointer rounded-md font-semibold ${isProcessing ? "text-slate-400 cursor-not-allowed" : "text-blue-600 hover:text-blue-500"}`}
+              >
+                <span>
+                  {isProcessing ? "Sedang memproses..." : "Upload a file"}
+                </span>
+                {!isProcessing && (
+                  <input
                     type="file"
-                    multiple 
-                    disabled={isProcessing} 
-                    accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    multiple
+                    accept=".csv"
                     className="sr-only"
                     onChange={(e) => {
-                      const files = Array.from(e.target.files);
-                      const maxSize = 3.5 * 1024 * 1024 * 1024;
-                      
-                      const validFiles = files.filter(file => {
-                        if (file.size > maxSize) {
-                          alert(`*File ${file.name} is too large. The maximum allowed size is 3.5GB.*`);
-                          return false;
-                        }
-                        return true;
+                      const newFiles = Array.from(e.target.files);
+                      setSelectedFiles((prev) => {
+                        const existingNames = new Set(prev.map((f) => f.name));
+                        return [
+                          ...prev,
+                          ...newFiles.filter((f) => !existingNames.has(f.name)),
+                        ];
                       });
-
-                      setSelectedFiles(prev => [...prev, ...validFiles]);
-                      e.target.value = null; 
+                      e.target.value = "";
                     }}
-                />
+                  />
+                )}
               </label>
-              <p className="pl-1">or drag and drop</p>
+              {!isProcessing && <p className="pl-1">or drag and drop</p>}
             </div>
-            <p className="text-xs leading-5 text-slate-600">CSV, XLSX</p>
+            {!isProcessing && (
+              <p className="text-xs text-slate-500 mt-2">CSV files only</p>
+            )}
           </div>
         </div>
 
+        {/* Daftar file terpilih */}
         {selectedFiles.length > 0 && (
-          <div className="mt-4 space-y-2 flex-grow">
-            {selectedFiles.map((file, index) => {
-              const isExcelOrCSV = file.name.endsWith(".csv") || file.name.endsWith(".xls") || file.name.endsWith(".xlsx");
-              return (
-                <div key={index} className={`flex items-center justify-between px-4 py-2 rounded ${isProcessing ? 'bg-slate-50 opacity-70' : 'bg-slate-100'}`}>
-                  <div className="flex items-center gap-2 text-sm text-slate-700">
-                    <FileText className={`w-5 h-5 ${isExcelOrCSV ? 'text-blue-600' : 'text-slate-500'}`} />
-                    <span className="truncate max-w-[250px]">{file.name}</span>
-                  </div>
-                  <button 
-                    onClick={() => handleRemoveFile(index)} 
-                    type="button"
-                    disabled={isProcessing} 
-                    className="disabled:cursor-not-allowed"
-                  >
-                    <Trash className={`w-5 h-5 transition-colors ${isProcessing ? 'text-slate-300' : 'text-red-500 hover:text-red-700 cursor-pointer'}`} />
-                  </button>
+          <div className="mt-4 space-y-2">
+            {selectedFiles.map((file, idx) => (
+              <div
+                key={idx}
+                className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-3 py-2"
+              >
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <FileText className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                  <span className="text-xs text-slate-700 truncate">
+                    {file.name}
+                  </span>
                 </div>
-              );
-            })}
+                <button
+                  onClick={() => handleRemoveFile(idx)}
+                  disabled={isProcessing}
+                  className="ml-2 flex-shrink-0 text-slate-400 hover:text-red-500 disabled:cursor-not-allowed"
+                >
+                  <Trash className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
           </div>
         )}
 
         <button
-          disabled={!institution || selectedFiles.length === 0 || isProcessing}
           onClick={handleUpload}
-          className={`mt-4 w-full px-4 py-2 rounded-md text-white flex items-center justify-center gap-2 font-medium transition-colors ${
-            !institution || selectedFiles.length === 0 || isProcessing
-              ? "bg-slate-300 text-slate-500 cursor-not-allowed"
-              : "bg-blue-600 hover:bg-blue-700 cursor-pointer"
-          }`}
+          disabled={
+            isProcessing || selectedFiles.length === 0 || !institution.trim()
+          }
+          className="mt-4 w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
         >
-          {isProcessing && <Loader2 className="w-5 h-5 animate-spin" />}
-          {isProcessing ? "Processing..." : "Start Grading Process"}
+          {isProcessing ? (
+            <>
+              <Loader2 className="animate-spin w-4 h-4 mr-2" />
+              Processing...
+            </>
+          ) : (
+            "Upload & Grade"
+          )}
         </button>
       </div>
 
-      {/* Kolom 2: Status Progress Bar Multipel */}
+      {/* Kolom 2: Progress upload */}
       <div className="bg-white p-6 rounded-xl shadow-sm flex flex-col">
-        <h3 className="font-semibold text-lg mb-4">2. Grading Status</h3>
-        <div className="flex-1">
-          {visibleProgresses.length > 0 ? (
-            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-              {visibleProgresses.map(([filename, itemData]) => (
-                <div key={filename} className={`p-4 rounded-xl border shadow-sm transition-all duration-300 ${
-                  itemData.isError ? 'bg-red-50 border-red-200' :
-                  itemData.isDone ? 'bg-green-50 border-green-200' :
-                  'bg-slate-50 border-slate-200'
-                }`}>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-semibold text-slate-700 truncate max-w-[200px]" title={filename}>
-                      {filename}
-                    </span>
-                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                      itemData.isError ? 'bg-red-200 text-red-800' :
-                      itemData.isDone ? 'bg-green-200 text-green-800' :
-                      'bg-blue-100 text-blue-700'
-                    }`}>
-                      {itemData.progress}%
-                    </span>
-                  </div>
-                  
-                  {/* Progress Bar Item Container */}
-                  <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden mb-3">
-                    <div 
-                      className={`h-2 rounded-full relative transition-all duration-500 ease-out ${
-                        itemData.isError ? 'bg-red-500' :
-                        itemData.isDone ? 'bg-green-500' : 
-                        'bg-blue-600'
-                      }`} 
-                      style={{ width: `${itemData.progress}%` }}
-                    >
-                       {!itemData.isDone && !itemData.isError && (
-                         <div className="absolute top-0 bottom-0 left-0 w-full bg-white/20 animate-[translateX_1.5s_infinite_linear] skew-x-[45deg] -translate-x-full"></div>
-                       )}
-                    </div>
-                  </div>
-
-                  {/* Status Message Text */}
-                  <div className="flex items-start gap-2">
-                     {!itemData.isDone && !itemData.isError && itemData.progress > 0 ? (
-                       <Loader2 className="w-4 h-4 text-blue-600 animate-spin mt-0.5 flex-shrink-0" />
-                     ) : itemData.isDone ? (
-                       <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                     ) : itemData.isError ? (
-                       <XCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
-                     ) : (
-                       <FileClock className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
-                     )}
-                     <p className={`text-xs leading-tight flex-1 font-medium ${
-                       itemData.isError ? 'text-red-700' : 'text-slate-600'
-                     }`}>
-                       {itemData.status}
-                     </p>
+        <h3 className="font-semibold text-lg mb-4">2. Upload Progress</h3>
+        {visibleProgresses.length > 0 ? (
+          <div className="space-y-4 overflow-y-auto max-h-96 pr-1">
+            {visibleProgresses.map(([filename, itemData]) => (
+              <div
+                key={filename}
+                className="bg-slate-50 border border-slate-200 rounded-lg p-3"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-slate-700 truncate max-w-[70%]">
+                    {filename}
+                  </span>
+                  <span
+                    className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                      itemData.isError
+                        ? "bg-red-200 text-red-800"
+                        : itemData.isDone
+                          ? "bg-green-200 text-green-800"
+                          : "bg-blue-100 text-blue-700"
+                    }`}
+                  >
+                    {itemData.progress}%
+                  </span>
+                </div>
+                <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden mb-3">
+                  <div
+                    className={`h-2 rounded-full relative transition-all duration-500 ease-out ${
+                      itemData.isError
+                        ? "bg-red-500"
+                        : itemData.isDone
+                          ? "bg-green-500"
+                          : "bg-blue-600"
+                    }`}
+                    style={{ width: `${itemData.progress}%` }}
+                  >
+                    {!itemData.isDone && !itemData.isError && (
+                      <div className="absolute top-0 bottom-0 left-0 w-full bg-white/20 animate-[translateX_1.5s_infinite_linear] skew-x-[45deg] -translate-x-full" />
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-slate-100 rounded-xl h-full animate-in fade-in duration-500 min-h-[250px]">
-               <p className="text-sm text-slate-500">
-                 Silakan upload file untuk memulai proses grading.<br/>Status tahapan akan ditampilkan di sini.
-               </p>
-            </div>
-          )}
-        </div>
+                <div className="flex items-start gap-2">
+                  {!itemData.isDone &&
+                  !itemData.isError &&
+                  itemData.progress > 0 ? (
+                    <Loader2 className="w-4 h-4 text-blue-600 animate-spin mt-0.5 flex-shrink-0" />
+                  ) : itemData.isDone ? (
+                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                  ) : itemData.isError ? (
+                    <XCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                  ) : (
+                    <FileClock className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
+                  )}
+                  <p
+                    className={`text-xs leading-tight flex-1 font-medium ${itemData.isError ? "text-red-700" : "text-slate-600"}`}
+                  >
+                    {itemData.status}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-slate-100 rounded-xl h-full animate-in fade-in duration-500 min-h-[250px]">
+            <p className="text-sm text-slate-500">
+              Silakan upload file untuk memulai proses grading.
+              <br />
+              Status tahapan akan ditampilkan di sini.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Kolom 3: Tabel Data */}
       <div className="lg:col-span-2 mt-8 bg-white p-6 rounded-xl shadow-sm">
         <div className="flex justify-between items-center mb-4">
-            <h3 className="font-semibold text-lg">Upload & Grading History</h3>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={!hasPrev || loading}
-                className="px-4 py-2 border border-slate-300 rounded-md text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Previous
-              </button>
-              <button
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                disabled={!hasNext || loading}
-                className="px-4 py-2 border border-slate-300 rounded-md text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-              </button>
-            </div>
+          <h3 className="font-semibold text-lg">Upload & Grading History</h3>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={!hasPrev || loading}
+              className="px-4 py-2 border border-slate-300 rounded-md text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={!hasNext || loading}
+              className="px-4 py-2 border border-slate-300 rounded-md text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <div className="min-h-[300px]">
@@ -362,7 +464,7 @@ const UploadAndGrading = () => {
                       <p className="text-slate-500">Fetching records...</p>
                     </td>
                   </tr>
-                ) : (!data || data.length === 0) ? (   // <--- Kurung kurawal "{" di awal sudah dihapus di sini
+                ) : !data || data.length === 0 ? (
                   <tr>
                     <td colSpan="6" className="text-center text-gray-500 py-6">
                       No data found
@@ -370,61 +472,100 @@ const UploadAndGrading = () => {
                   </tr>
                 ) : (
                   [...data]
-                  .sort((a, b) => new Date(b.upload_timestamp) - new Date(a.upload_timestamp))
-                  .map((item, index) => {
-                    // --- VARIABEL STATUS ---
-                    const isRowProcessing = loadingIds.includes(item.file_id) || item.matching_task_status === 'PROCESSING';
-                    const isSynced = item.is_sync === 1 || item.matching_task_status === 'SUCCESS';
-                    const isFailed = item.matching_task_status === 'FAILED';
+                    .sort(
+                      (a, b) =>
+                        new Date(b.upload_timestamp) -
+                        new Date(a.upload_timestamp),
+                    )
+                    .map((item, index) => {
+                      const isRowProcessing =
+                        loadingIds.includes(item.file_id) ||
+                        item.matching_task_status === "PROCESSING";
+                      const isSynced =
+                        item.is_sync === 1 ||
+                        item.matching_task_status === "SUCCESS";
+                      const isFailed = item.matching_task_status === "FAILED";
 
-                    return (
-                      <tr key={index} className="bg-white border-b border-slate-200 hover:bg-gray-50">
-                        <td className="px-6 py-4">{item.institution_name}</td>
-                        <td className="px-6 py-4">{item.original_filename}</td>
-                        <td className="px-6 py-4">{new Intl.NumberFormat('id-ID').format(item.row_count)}</td>
-                        <td className="px-6 py-4">
-                          <span className={`font-bold text-xs px-2 py-1 rounded ${getGradeClass(item.grade)}`}>
-                            Grade {item.grade}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span
-                            className={
-                              item.processing_status?.toUpperCase() === "GRADED"
-                                ? "bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full"
-                                : "text-gray-700 text-xs font-medium px-2.5 py-0.5 rounded-full"
-                            }
-                          >
-                            {item.processing_status?.toUpperCase() === "GRADED" ? "Grading Complete" : item.processing_status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <button
-                            disabled={isRowProcessing || isSynced}
-                            onClick={() => handleSync(item.file_id)}
-                            className={`font-medium ${
-                              isSynced 
-                                ? "cursor-not-allowed text-green-600" 
-                                : isRowProcessing
-                                  ? "cursor-not-allowed text-slate-400"
-                                  : isFailed
-                                    ? "text-red-600 hover:underline cursor-pointer"
-                                    : "text-blue-600 hover:underline cursor-pointer"
-                            }`}
-                          >
-                            {isSynced 
-                              ? 'Synced' 
-                              : isRowProcessing 
-                                ? 'Processing...' 
-                                : isFailed
-                                  ? 'Failed (Retry)'
-                                  : 'Start Synchronization'
-                            }
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })
+                      return (
+                        <Fragment key={item.file_id || index}>
+                          <tr className="bg-white border-b border-slate-200 hover:bg-gray-50">
+                            <td className="px-6 py-4">
+                              {item.institution_name}
+                            </td>
+                            <td className="px-6 py-4">
+                              {item.original_filename}
+                            </td>
+                            <td className="px-6 py-4">
+                              {new Intl.NumberFormat("id-ID").format(
+                                item.row_count,
+                              )}
+                            </td>
+                            <td className="px-6 py-4">
+                              <span
+                                className={`font-bold text-xs px-2 py-1 rounded ${getGradeClass(item.grade)}`}
+                              >
+                                Grade {item.grade}
+                              </span>
+                            </td>
+
+                            <td className="px-6 py-4">
+                              <span
+                                className={
+                                  item.processing_status?.toUpperCase() ===
+                                  "GRADED"
+                                    ? "bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full"
+                                    : "text-gray-700 text-xs font-medium px-2.5 py-0.5 rounded-full"
+                                }
+                              >
+                                {item.processing_status?.toUpperCase() ===
+                                "GRADED"
+                                  ? "Grading Complete"
+                                  : item.processing_status}
+                              </span>
+                            </td>
+
+                            <td className="px-6 py-4">
+                              <div className="flex items-center justify-center gap-2">
+                                <button
+                                  disabled={isRowProcessing || isSynced}
+                                  onClick={() => handleSync(item.file_id)}
+                                  className={`font-medium ${
+                                    isSynced
+                                      ? "text-green-600 cursor-not-allowed"
+                                      : isRowProcessing
+                                        ? "text-slate-400 cursor-not-allowed"
+                                        : isFailed
+                                          ? "text-red-600 hover:underline"
+                                          : "text-blue-600 hover:underline"
+                                  }`}
+                                >
+                                  {isSynced
+                                    ? "Synced"
+                                    : isRowProcessing
+                                      ? "Processing..."
+                                      : isFailed
+                                        ? "Failed (Retry)"
+                                        : "Start Synchronization"}
+                                </button>
+
+                                {/* Tombol Log: Hanya muncul saat status = Processing */}
+                                {isRowProcessing && (
+                                  <button
+                                    onClick={() =>
+                                      setSelectedLogId(item.file_id)
+                                    }
+                                    className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
+                                    title="View Matching Log"
+                                  >
+                                    <Terminal className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        </Fragment>
+                      );
+                    })
                 )}
               </tbody>
             </table>
@@ -434,11 +575,110 @@ const UploadAndGrading = () => {
         {!loading && (
           <div className="flex items-center justify-between mt-6 border-t border-slate-200 pt-4">
             <span className="text-sm text-slate-600">
-              Showing page <span className="font-semibold text-slate-900">{page}</span> of <span className="font-semibold text-slate-900">{totalPages}</span>
+              Showing page{" "}
+              <span className="font-semibold text-slate-900">{page}</span> of{" "}
+              <span className="font-semibold text-slate-900">{totalPages}</span>
             </span>
           </div>
         )}
       </div>
+
+      {/* --- FLOATING LOG MODAL --- */}
+      {selectedLogId && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div
+            className="bg-slate-950 w-full max-w-2xl rounded-xl shadow-2xl border border-slate-800 flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+            style={{ maxHeight: "80vh" }}
+          >
+            {/* Header Modal */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/50">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-500/10 rounded-lg">
+                  <Terminal className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="text-white font-semibold leading-none">
+                    Matching System Logs
+                  </h3>
+                  <p className="text-slate-500 text-xs mt-1 font-mono">
+                    {selectedLogId}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedLogId(null)}
+                className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Body Modal (Log Content) */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-1 font-mono text-[13px] scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+              {!matchingLogs[selectedLogId] ||
+              matchingLogs[selectedLogId].logs.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-slate-500">
+                  <Loader2 className="w-8 h-8 animate-spin mb-3 opacity-20" />
+                  <p className="italic">Waiting for system response...</p>
+                </div>
+              ) : (
+                matchingLogs[selectedLogId].logs.map((entry, i) => {
+                  const colorClass =
+                    entry.level === "ERROR"
+                      ? "text-red-400"
+                      : entry.level === "SUCCESS"
+                        ? "text-green-400"
+                        : entry.level === "WARN"
+                          ? "text-yellow-400"
+                          : "text-blue-300";
+
+                  return (
+                    <div
+                      key={i}
+                      className="flex gap-4 border-l border-slate-800 pl-4 hover:bg-white/5 py-0.5 transition-colors group"
+                    >
+                      <span className="text-slate-600 flex-shrink-0 w-20 group-hover:text-slate-400">
+                        {entry.ts
+                          ? entry.ts.split("T")[1].split(".")[0]
+                          : "--:--:--"}
+                      </span>
+                      <span className={`${colorClass} leading-6 break-words`}>
+                        {entry.message}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Footer Modal */}
+            <div className="px-6 py-3 bg-slate-900/30 border-t border-slate-800 flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                {matchingLogs[selectedLogId]?.isDone ? (
+                  <span className="flex items-center gap-1.5 text-xs text-green-400 font-medium">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Process Completed
+                  </span>
+                ) : matchingLogs[selectedLogId]?.isFailed ? (
+                  <span className="flex items-center gap-1.5 text-xs text-red-400 font-medium">
+                    <XCircle className="w-3.5 h-3.5" /> Process Failed
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1.5 text-xs text-blue-400 font-medium">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> System
+                    processing...
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => setSelectedLogId(null)}
+                className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium rounded-lg transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
