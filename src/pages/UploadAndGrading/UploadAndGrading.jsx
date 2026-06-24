@@ -9,24 +9,35 @@ import {
   X,
   List,
 } from "lucide-react";
-import { useState, Fragment } from "react";
+import { useState, Fragment, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import useUploadFile from "./hooks/useUploadFile";
 import useGetData from "./hooks/useGetData";
-import useSync from "./hooks/useSync";
+import useSync, { listenToSyncStream } from "./hooks/useSync";
 import { ErrorPopOut } from "../../components/PopOut/ErrorPopOut";
 import { SuccessPopOut } from "../../components/PopOut/SuccessPopOut";
+import axiosInstance from "../../axios/axiosInstance";
 
 const UploadAndGrading = () => {
+  // ── URL State Management ──
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedLogId = searchParams.get("log_file_id");
+
+  const setSelectedLogId = (id) => {
+    if (id) {
+      searchParams.set("log_file_id", id);
+      setSearchParams(searchParams);
+    } else {
+      searchParams.delete("log_file_id");
+      setSearchParams(searchParams);
+    }
+  };
+
   const [institution, setInstitution] = useState("");
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [selectedLogId, setSelectedLogId] = useState(null);
 
-  // State progress upload per file
   const [fileProgresses, setFileProgresses] = useState({});
-
-  // State log matching per file_id
-  // Format: { [file_id]: { logs: [{message, level, ts}], isDone: bool, isFailed: bool } }
   const [matchingLogs, setMatchingLogs] = useState({});
 
   const { uploadFile } = useUploadFile();
@@ -58,6 +69,102 @@ const UploadAndGrading = () => {
         return "bg-gray-200 text-gray-800";
     }
   };
+
+  // ── EFFECT: Fetch History & Reconnect Stream Saat Refresh ──
+  useEffect(() => {
+    if (!selectedLogId) return;
+
+    // FIX 1: Cegah Double Trigger!
+    // Jika state log untuk file ini sudah pernah dibuat (oleh handleSync atau proses sebelumnya),
+    // langsung hentikan useEffect agar tidak membuka stream yang kedua kalinya.
+    if (matchingLogs[selectedLogId]) return;
+
+    const reconnectAndFetch = async () => {
+      try {
+        let historyLogs = [];
+        let currentStatus = "PROCESSING";
+
+        try {
+          const historyRes = await axiosInstance.general.get(
+            `/match/logs/${selectedLogId}`
+          );
+          historyLogs = historyRes.data.logs || [];
+          currentStatus = historyRes.data.matching_task_status;
+        } catch (err) {
+          console.warn(
+            "API histori log gagal, melanjutkan koneksi stream...",
+            err.message
+          );
+        }
+
+        // Jika proses di backend sudah SUCCESS / FAILED, 
+        // kita cukup tampilkan history-nya tanpa perlu membuka stream lagi.
+        if (currentStatus === "SUCCESS" || currentStatus === "FAILED") {
+          setMatchingLogs((prev) => ({
+            ...prev,
+            [selectedLogId]: {
+              logs: historyLogs,
+              isDone: currentStatus === "SUCCESS",
+              isFailed: currentStatus === "FAILED",
+            },
+          }));
+          return;
+        }
+
+        // FIX 2: Mencegah Log Terduplikat dengan Stream
+        // Karena endpoint `/stream/` backend otomatis memutar ulang log dari awal (cursor=0),
+        // kita KOSONGKAN array log di sini agar isinya murni berasal dari satu pintu (Stream)
+        setMatchingLogs((prev) => ({
+          ...prev,
+          [selectedLogId]: {
+            logs: [], // <--- Tetap array kosong
+            isDone: false,
+            isFailed: false,
+          },
+        }));
+
+        const onLog = (payload) => {
+          setMatchingLogs((prev) => {
+            const existingLogs = prev[selectedLogId]?.logs || [];
+            return {
+              ...prev,
+              [selectedLogId]: {
+                ...prev[selectedLogId],
+                logs: [...existingLogs, payload],
+              },
+            };
+          });
+        };
+
+        const result = await listenToSyncStream(selectedLogId, onLog);
+
+        if (result && result.matching_task_status === "SUCCESS") {
+          setMatchingLogs((prev) => ({
+            ...prev,
+            [selectedLogId]: {
+              ...prev[selectedLogId],
+              isDone: true,
+              isFailed: false,
+            },
+          }));
+          refetch();
+        }
+      } catch (err) {
+        console.error("Gagal Reconnect Stream:", err);
+        setMatchingLogs((prev) => ({
+          ...prev,
+          [selectedLogId]: {
+            ...(prev[selectedLogId] || { logs: [] }),
+            isDone: false,
+            isFailed: true,
+          },
+        }));
+      }
+    };
+
+    reconnectAndFetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedLogId]);
 
   // ── Upload handler ──────────────────────────────────────────
   const handleUpload = async () => {
@@ -124,7 +231,7 @@ const UploadAndGrading = () => {
     const success = await uploadFile(
       selectedFiles,
       institution,
-      handleStreamProgress,
+      handleStreamProgress
     );
 
     if (success) {
@@ -141,7 +248,7 @@ const UploadAndGrading = () => {
 
   const handleRemoveFile = (indexToRemove) => {
     setSelectedFiles((prev) =>
-      prev.filter((_, index) => index !== indexToRemove),
+      prev.filter((_, index) => index !== indexToRemove)
     );
   };
 
@@ -150,9 +257,9 @@ const UploadAndGrading = () => {
   const [loadingIds, setLoadingIds] = useState([]);
 
   const handleSync = async (id) => {
+    setSelectedLogId(id);
     setLoadingIds((prev) => [...prev, id]);
 
-    // Inisialisasi panel log untuk file ini
     setMatchingLogs((prev) => ({
       ...prev,
       [id]: { logs: [], isDone: false, isFailed: false },
@@ -161,10 +268,9 @@ const UploadAndGrading = () => {
     SuccessPopOut(
       "Synchronizing...",
       "info",
-      "Proses pencocokan data sedang berjalan...",
+      "Proses pencocokan data sedang berjalan..."
     );
 
-    // Callback dipanggil tiap ada log baru dari SSE
     const handleLog = (logEntry) => {
       setMatchingLogs((prev) => {
         const current = prev[id] || {
@@ -186,7 +292,6 @@ const UploadAndGrading = () => {
       const result = await syncByGrade({ id, onLog: handleLog });
 
       if (result && result.matching_task_status === "SUCCESS") {
-        // Tandai log panel sebagai selesai
         setMatchingLogs((prev) => ({
           ...prev,
           [id]: { ...prev[id], isDone: true },
@@ -195,7 +300,7 @@ const UploadAndGrading = () => {
         SuccessPopOut(
           "Matching Completed",
           "success",
-          `Sinkronisasi berhasil.`,
+          `Sinkronisasi berhasil.`
         );
         refetch();
       } else {
@@ -204,8 +309,6 @@ const UploadAndGrading = () => {
       }
     } catch (err) {
       console.error("Failed Sync:", err);
-
-      // Tandai log panel sebagai gagal
       setMatchingLogs((prev) => ({
         ...prev,
         [id]: {
@@ -214,14 +317,13 @@ const UploadAndGrading = () => {
           logs: [
             ...(prev[id]?.logs || []),
             {
-              message: err.message,
+              message: err.message || "Gagal menyambung ke server.",
               level: "ERROR",
               ts: new Date().toISOString(),
             },
           ],
         },
       }));
-
       ErrorPopOut();
     } finally {
       setLoadingIds((prev) => prev.filter((x) => x !== id));
@@ -240,7 +342,7 @@ const UploadAndGrading = () => {
   }
 
   const visibleProgresses = Object.entries(fileProgresses).filter(
-    (entry) => entry[1].show,
+    (entry) => entry[1].show
   );
 
   return (
@@ -261,7 +363,9 @@ const UploadAndGrading = () => {
           />
         </div>
         <div
-          className={`mt-2 flex justify-center rounded-lg border border-dashed px-6 py-10 transition-colors ${isProcessing ? "border-slate-200 bg-slate-50" : "border-slate-900/25"}`}
+          className={`mt-2 flex justify-center rounded-lg border border-dashed px-6 py-10 transition-colors ${
+            isProcessing ? "border-slate-200 bg-slate-50" : "border-slate-900/25"
+          }`}
         >
           <div className="text-center">
             {isProcessing ? (
@@ -271,7 +375,11 @@ const UploadAndGrading = () => {
             )}
             <div className="mt-4 flex text-sm text-slate-600 justify-center">
               <label
-                className={`relative cursor-pointer rounded-md font-semibold ${isProcessing ? "text-slate-400 cursor-not-allowed" : "text-blue-600 hover:text-blue-500"}`}
+                className={`relative cursor-pointer rounded-md font-semibold ${
+                  isProcessing
+                    ? "text-slate-400 cursor-not-allowed"
+                    : "text-blue-600 hover:text-blue-500"
+                }`}
               >
                 <span>
                   {isProcessing ? "Sedang memproses..." : "Upload a file"}
@@ -367,8 +475,8 @@ const UploadAndGrading = () => {
                       itemData.isError
                         ? "bg-red-200 text-red-800"
                         : itemData.isDone
-                          ? "bg-green-200 text-green-800"
-                          : "bg-blue-100 text-blue-700"
+                        ? "bg-green-200 text-green-800"
+                        : "bg-blue-100 text-blue-700"
                     }`}
                   >
                     {itemData.progress}%
@@ -380,8 +488,8 @@ const UploadAndGrading = () => {
                       itemData.isError
                         ? "bg-red-500"
                         : itemData.isDone
-                          ? "bg-green-500"
-                          : "bg-blue-600"
+                        ? "bg-green-500"
+                        : "bg-blue-600"
                     }`}
                     style={{ width: `${itemData.progress}%` }}
                   >
@@ -403,7 +511,9 @@ const UploadAndGrading = () => {
                     <FileClock className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
                   )}
                   <p
-                    className={`text-xs leading-tight flex-1 font-medium ${itemData.isError ? "text-red-700" : "text-slate-600"}`}
+                    className={`text-xs leading-tight flex-1 font-medium ${
+                      itemData.isError ? "text-red-700" : "text-slate-600"
+                    }`}
                   >
                     {itemData.status}
                   </p>
@@ -475,7 +585,7 @@ const UploadAndGrading = () => {
                     .sort(
                       (a, b) =>
                         new Date(b.upload_timestamp) -
-                        new Date(a.upload_timestamp),
+                        new Date(a.upload_timestamp)
                     )
                     .map((item, index) => {
                       const isRowProcessing =
@@ -497,12 +607,14 @@ const UploadAndGrading = () => {
                             </td>
                             <td className="px-6 py-4">
                               {new Intl.NumberFormat("id-ID").format(
-                                item.row_count,
+                                item.row_count
                               )}
                             </td>
                             <td className="px-6 py-4">
                               <span
-                                className={`font-bold text-xs px-2 py-1 rounded ${getGradeClass(item.grade)}`}
+                                className={`font-bold text-xs px-2 py-1 rounded ${getGradeClass(
+                                  item.grade
+                                )}`}
                               >
                                 Grade {item.grade}
                               </span>
@@ -533,19 +645,19 @@ const UploadAndGrading = () => {
                                     isSynced
                                       ? "text-green-600 cursor-not-allowed"
                                       : isRowProcessing
-                                        ? "text-slate-400 cursor-not-allowed"
-                                        : isFailed
-                                          ? "text-red-600 hover:underline"
-                                          : "text-blue-600 hover:underline"
+                                      ? "text-slate-400 cursor-not-allowed"
+                                      : isFailed
+                                      ? "text-red-600 hover:underline"
+                                      : "text-blue-600 hover:underline"
                                   }`}
                                 >
                                   {isSynced
                                     ? "Synced"
                                     : isRowProcessing
-                                      ? "Processing..."
-                                      : isFailed
-                                        ? "Failed (Retry)"
-                                        : "Start Synchronization"}
+                                    ? "Processing..."
+                                    : isFailed
+                                    ? "Failed (Retry)"
+                                    : "Start Synchronization"}
                                 </button>
 
                                 {/* Tombol Log: Hanya muncul saat status = Processing */}
@@ -601,7 +713,7 @@ const UploadAndGrading = () => {
                     Matching System Logs
                   </h3>
                   <p className="text-slate-500 text-xs mt-1 font-mono">
-                    {selectedLogId}
+                    ID: {selectedLogId}
                   </p>
                 </div>
               </div>
@@ -627,10 +739,10 @@ const UploadAndGrading = () => {
                     entry.level === "ERROR"
                       ? "text-red-400"
                       : entry.level === "SUCCESS"
-                        ? "text-green-400"
-                        : entry.level === "WARN"
-                          ? "text-yellow-400"
-                          : "text-blue-300";
+                      ? "text-green-400"
+                      : entry.level === "WARN"
+                      ? "text-yellow-400"
+                      : "text-blue-300";
 
                   return (
                     <div

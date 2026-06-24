@@ -1,21 +1,16 @@
 import { useMutation } from '@tanstack/react-query';
 import axiosInstance from '../../../axios/axiosInstance';
 
-const syncByGrade = async ({ id, onLog }) => {
-  
-  await axiosInstance.general.post(`/match/?file_id=${id}`, null);
+// 1. Fungsi ini DI-EXPORT TERPISAH agar bisa dipanggil saat RECONNECT (Refresh)
+export const listenToSyncStream = (id, onLog) => {
   return new Promise((resolve, reject) => {
     const baseURL = axiosInstance.general.defaults.baseURL;
     const url     = `${baseURL}/match/stream/${id}`;
 
-    const response$ = fetch(url, {
+    fetch(url, {
       method : 'GET',
       headers: { Accept: 'text/event-stream' },
-    });
-
-    let finalStatus = null; 
-
-    response$
+    })
       .then(async (response) => {
         if (!response.ok) {
           throw new Error(`SSE connection failed: ${response.status}`);
@@ -24,15 +19,14 @@ const syncByGrade = async ({ id, onLog }) => {
         const reader  = response.body.getReader();
         const decoder = new TextDecoder();
         let   buffer  = '';
+        let   finalStatus = null; 
 
-        
         while (true) {
           const { value, done } = await reader.read();
           if (done) break;
 
           buffer += decoder.decode(value, { stream: true });
 
-          
           const parts = buffer.split('\n\n');
           buffer = parts.pop(); 
 
@@ -46,7 +40,6 @@ const syncByGrade = async ({ id, onLog }) => {
               continue;
             }
 
-            
             if (payload.message === '__DONE__') {
               finalStatus = payload.level; 
               await reader.cancel();
@@ -57,7 +50,6 @@ const syncByGrade = async ({ id, onLog }) => {
           if (finalStatus !== null) break;
         }
 
-        
         if (finalStatus === 'SUCCESS') {
           resolve({ matching_task_status: 'SUCCESS', file_id: id });
         } else {
@@ -70,9 +62,18 @@ const syncByGrade = async ({ id, onLog }) => {
   });
 };
 
+// 2. Fungsi utama yang dipanggil saat tombol "Start Synchronization" diklik pertama kali
+const syncByGrade = async ({ id, onLog }) => {
+  // A. Tembak POST untuk mengubah status DB menjadi PROCESSING dan trigger task background
+  await axiosInstance.general.post(`/match/?file_id=${id}`, null);
+  
+  // B. Panggil fungsi stream di atas untuk mendengarkan log
+  return listenToSyncStream(id, onLog);
+};
+
 const useSync = () => {
   return useMutation({
-    mutationFn: ({ id, onLog }) => syncByGrade({ id, onLog }),
+    mutationFn: syncByGrade,
   });
 };
 
