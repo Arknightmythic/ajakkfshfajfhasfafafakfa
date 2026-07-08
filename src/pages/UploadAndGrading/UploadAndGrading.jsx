@@ -16,7 +16,6 @@ import useGetData from "./hooks/useGetData";
 import useSync, { listenToSyncStream } from "./hooks/useSync";
 import { ErrorPopOut } from "../../components/PopOut/ErrorPopOut";
 import { SuccessPopOut } from "../../components/PopOut/SuccessPopOut";
-import axiosInstance from "../../axios/axiosInstance";
 
 const UploadAndGrading = () => {
   // ── URL State Management ──
@@ -71,73 +70,44 @@ const UploadAndGrading = () => {
   };
 
   // ── EFFECT: Fetch History & Reconnect Stream Saat Refresh ──
+  // ── EFFECT: Fetch History & Reconnect Stream Saat Refresh ──
   useEffect(() => {
     if (!selectedLogId) return;
 
-    // FIX 1: Cegah Double Trigger!
-    // Jika state log untuk file ini sudah pernah dibuat (oleh handleSync atau proses sebelumnya),
-    // langsung hentikan useEffect agar tidak membuka stream yang kedua kalinya.
-    if (matchingLogs[selectedLogId]) return;
+    let isMounted = true;
 
-    const reconnectAndFetch = async () => {
-      try {
-        let historyLogs = [];
-        let currentStatus = "PROCESSING";
+    // KOSONGKAN array log secara paksa di sini setiap kali modal dibuka / di-refresh.
+    // Karena endpoint stream di backend selalu mengulang dari cursor=0,
+    // ini mencegah log lama tertimpa ganda dengan log dari stream.
+    setMatchingLogs((prev) => ({
+      ...prev,
+      [selectedLogId]: {
+        logs: [],
+        isDone: false,
+        isFailed: false,
+      },
+    }));
 
-        try {
-          const historyRes = await axiosInstance.general.get(
-            `/match/logs/${selectedLogId}`
-          );
-          historyLogs = historyRes.data.logs || [];
-          currentStatus = historyRes.data.matching_task_status;
-        } catch (err) {
-          console.warn(
-            "API histori log gagal, melanjutkan koneksi stream...",
-            err.message
-          );
-        }
-
-        // Jika proses di backend sudah SUCCESS / FAILED, 
-        // kita cukup tampilkan history-nya tanpa perlu membuka stream lagi.
-        if (currentStatus === "SUCCESS" || currentStatus === "FAILED") {
-          setMatchingLogs((prev) => ({
-            ...prev,
-            [selectedLogId]: {
-              logs: historyLogs,
-              isDone: currentStatus === "SUCCESS",
-              isFailed: currentStatus === "FAILED",
-            },
-          }));
-          return;
-        }
-
-        // FIX 2: Mencegah Log Terduplikat dengan Stream
-        // Karena endpoint `/stream/` backend otomatis memutar ulang log dari awal (cursor=0),
-        // kita KOSONGKAN array log di sini agar isinya murni berasal dari satu pintu (Stream)
-        setMatchingLogs((prev) => ({
+    const onLog = (payload) => {
+      if (!isMounted) return; // Cegah update jika modal sudah ditutup
+      setMatchingLogs((prev) => {
+        const existingLogs = prev[selectedLogId]?.logs || [];
+        return {
           ...prev,
           [selectedLogId]: {
-            logs: [], // <--- Tetap array kosong
-            isDone: false,
-            isFailed: false,
+            ...prev[selectedLogId],
+            logs: [...existingLogs, payload],
           },
-        }));
-
-        const onLog = (payload) => {
-          setMatchingLogs((prev) => {
-            const existingLogs = prev[selectedLogId]?.logs || [];
-            return {
-              ...prev,
-              [selectedLogId]: {
-                ...prev[selectedLogId],
-                logs: [...existingLogs, payload],
-              },
-            };
-          });
         };
+      });
+    };
 
-        const result = await listenToSyncStream(selectedLogId, onLog);
-
+    // Langsung buka koneksi Stream SSE tanpa memanggil endpoint /logs/ lagi.
+    // Jika data sudah sukses/gagal di masa lalu, stream otomatis menyemburkan semua log secepat kilat
+    // dan langsung diakhiri dengan payload message "__DONE__".
+    listenToSyncStream(selectedLogId, onLog, "__MATCHING_DONE__")
+      .then((result) => {
+        if (!isMounted) return;
         if (result && result.matching_task_status === "SUCCESS") {
           setMatchingLogs((prev) => ({
             ...prev,
@@ -147,10 +117,12 @@ const UploadAndGrading = () => {
               isFailed: false,
             },
           }));
-          refetch();
+          refetch(); // Refresh tabel setelah selesai
         }
-      } catch (err) {
-        console.error("Gagal Reconnect Stream:", err);
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        console.error("Gagal Stream:", err);
         setMatchingLogs((prev) => ({
           ...prev,
           [selectedLogId]: {
@@ -159,10 +131,12 @@ const UploadAndGrading = () => {
             isFailed: true,
           },
         }));
-      }
-    };
+      });
 
-    reconnectAndFetch();
+    // Cleanup function: hentikan state update jika user klik "Close" atau file berganti
+    return () => {
+      isMounted = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLogId]);
 
@@ -231,7 +205,7 @@ const UploadAndGrading = () => {
     const success = await uploadFile(
       selectedFiles,
       institution,
-      handleStreamProgress
+      handleStreamProgress,
     );
 
     if (success) {
@@ -248,7 +222,7 @@ const UploadAndGrading = () => {
 
   const handleRemoveFile = (indexToRemove) => {
     setSelectedFiles((prev) =>
-      prev.filter((_, index) => index !== indexToRemove)
+      prev.filter((_, index) => index !== indexToRemove),
     );
   };
 
@@ -257,7 +231,6 @@ const UploadAndGrading = () => {
   const [loadingIds, setLoadingIds] = useState([]);
 
   const handleSync = async (id) => {
-    setSelectedLogId(id);
     setLoadingIds((prev) => [...prev, id]);
 
     setMatchingLogs((prev) => ({
@@ -268,29 +241,15 @@ const UploadAndGrading = () => {
     SuccessPopOut(
       "Synchronizing...",
       "info",
-      "Proses pencocokan data sedang berjalan..."
+      "Proses pencocokan data sedang berjalan...",
     );
 
-    const handleLog = (logEntry) => {
-      setMatchingLogs((prev) => {
-        const current = prev[id] || {
-          logs: [],
-          isDone: false,
-          isFailed: false,
-        };
-        return {
-          ...prev,
-          [id]: {
-            ...current,
-            logs: [...current.logs, logEntry],
-          },
-        };
-      });
-    };
-
     try {
-      const result = await syncByGrade({ id, onLog: handleLog });
-
+      const result = await syncByGrade({
+        id,
+        onLog: null,
+        stopKeyword: "__MATCHING_DONE__",
+      });
       if (result && result.matching_task_status === "SUCCESS") {
         setMatchingLogs((prev) => ({
           ...prev,
@@ -300,7 +259,7 @@ const UploadAndGrading = () => {
         SuccessPopOut(
           "Matching Completed",
           "success",
-          `Sinkronisasi berhasil.`
+          `Sinkronisasi berhasil.`,
         );
         refetch();
       } else {
@@ -342,7 +301,7 @@ const UploadAndGrading = () => {
   }
 
   const visibleProgresses = Object.entries(fileProgresses).filter(
-    (entry) => entry[1].show
+    (entry) => entry[1].show,
   );
 
   return (
@@ -364,7 +323,9 @@ const UploadAndGrading = () => {
         </div>
         <div
           className={`mt-2 flex justify-center rounded-lg border border-dashed px-6 py-10 transition-colors ${
-            isProcessing ? "border-slate-200 bg-slate-50" : "border-slate-900/25"
+            isProcessing
+              ? "border-slate-200 bg-slate-50"
+              : "border-slate-900/25"
           }`}
         >
           <div className="text-center">
@@ -475,8 +436,8 @@ const UploadAndGrading = () => {
                       itemData.isError
                         ? "bg-red-200 text-red-800"
                         : itemData.isDone
-                        ? "bg-green-200 text-green-800"
-                        : "bg-blue-100 text-blue-700"
+                          ? "bg-green-200 text-green-800"
+                          : "bg-blue-100 text-blue-700"
                     }`}
                   >
                     {itemData.progress}%
@@ -488,8 +449,8 @@ const UploadAndGrading = () => {
                       itemData.isError
                         ? "bg-red-500"
                         : itemData.isDone
-                        ? "bg-green-500"
-                        : "bg-blue-600"
+                          ? "bg-green-500"
+                          : "bg-blue-600"
                     }`}
                     style={{ width: `${itemData.progress}%` }}
                   >
@@ -585,7 +546,7 @@ const UploadAndGrading = () => {
                     .sort(
                       (a, b) =>
                         new Date(b.upload_timestamp) -
-                        new Date(a.upload_timestamp)
+                        new Date(a.upload_timestamp),
                     )
                     .map((item, index) => {
                       const isRowProcessing =
@@ -607,13 +568,13 @@ const UploadAndGrading = () => {
                             </td>
                             <td className="px-6 py-4">
                               {new Intl.NumberFormat("id-ID").format(
-                                item.row_count
+                                item.row_count,
                               )}
                             </td>
                             <td className="px-6 py-4">
                               <span
                                 className={`font-bold text-xs px-2 py-1 rounded ${getGradeClass(
-                                  item.grade
+                                  item.grade,
                                 )}`}
                               >
                                 Grade {item.grade}
@@ -645,19 +606,19 @@ const UploadAndGrading = () => {
                                     isSynced
                                       ? "text-green-600 cursor-not-allowed"
                                       : isRowProcessing
-                                      ? "text-slate-400 cursor-not-allowed"
-                                      : isFailed
-                                      ? "text-red-600 hover:underline"
-                                      : "text-blue-600 hover:underline"
+                                        ? "text-slate-400 cursor-not-allowed"
+                                        : isFailed
+                                          ? "text-red-600 hover:underline"
+                                          : "text-blue-600 hover:underline"
                                   }`}
                                 >
                                   {isSynced
                                     ? "Synced"
                                     : isRowProcessing
-                                    ? "Processing..."
-                                    : isFailed
-                                    ? "Failed (Retry)"
-                                    : "Start Synchronization"}
+                                      ? "Processing..."
+                                      : isFailed
+                                        ? "Failed (Retry)"
+                                        : "Start Synchronization"}
                                 </button>
 
                                 {/* Tombol Log: Hanya muncul saat status = Processing */}
@@ -739,10 +700,10 @@ const UploadAndGrading = () => {
                     entry.level === "ERROR"
                       ? "text-red-400"
                       : entry.level === "SUCCESS"
-                      ? "text-green-400"
-                      : entry.level === "WARN"
-                      ? "text-yellow-400"
-                      : "text-blue-300";
+                        ? "text-green-400"
+                        : entry.level === "WARN"
+                          ? "text-yellow-400"
+                          : "text-blue-300";
 
                   return (
                     <div

@@ -12,10 +12,15 @@ import axiosInstance from "../../../axios/axiosInstance";
 const InvestigatePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  // Alias metadata_id menjadi file_id agar konsisten dengan payload API
-  const { metadata_id: file_id, institutionName, statusGrade } = location.state || {};
   const queryClient = useQueryClient();
 
+  const queryParams = new URLSearchParams(location.search);
+  
+  const file_id = location.state?.metadata_id || queryParams.get("file_id");
+  const institutionName = location.state?.institutionName || queryParams.get("name") || "Investigation Mode";
+  const statusGrade = location.state?.statusGrade || queryParams.get("grade") || "Unknown";
+  
+  
   const [page, setPage] = useState(1);
   const [selectedIndexes, setSelectedIndexes] = useState([]);
   const [selectedMatchIndex, setSelectedMatchIndex] = useState(null);

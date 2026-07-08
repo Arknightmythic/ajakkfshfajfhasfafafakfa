@@ -24,18 +24,19 @@ const TableHeader = ({
 
   const rawKeys = Object.keys(data[0]);
 
-  // --- PERUBAHAN 1: Koreksi prefix untuk master preview ---
   const prefixMap = {
     investigate: "institution_",
     matches: "master_",
     preview_institution: "institution_",
-    preview_master: "", // Master preview tidak memiliki prefix
+    preview_master: "", 
   };
   
   const prefix = prefixMap[type] || "";
 
-  const baseColumns = grade
-    ? gradeColumnsMap[grade.toUpperCase()] ?? []
+  // --- PERBAIKAN BUG: Pastikan fallback ke rawKeys berjalan jika grade "Unknown" atau tidak valid ---
+  const normalizedGrade = grade ? grade.toUpperCase() : null;
+  const baseColumns = (normalizedGrade && gradeColumnsMap[normalizedGrade])
+    ? gradeColumnsMap[normalizedGrade]
     : rawKeys.map((key) => key.replace(prefix, ""));
 
   let headers = baseColumns
@@ -52,7 +53,6 @@ const TableHeader = ({
     .filter(key => key !== null);
 
   if (type === "matches" || type === "preview_master") {
-    // --- PERUBAHAN 2: Buat filter lebih fleksibel ---
     headers = headers.filter(
       (key) => !key.endsWith("id") && key !== "master_nama" && key !== "nama"
     );

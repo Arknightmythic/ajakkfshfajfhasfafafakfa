@@ -8,12 +8,11 @@ const PreviewPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const {
-    metadata_id: file_id,
-    institutionName = "State Civil Service Agency",
-    statusGrade,
-  } = location.state || {};
+  const queryParams = new URLSearchParams(location.search);
   
+  const file_id = location.state?.metadata_id || queryParams.get("file_id");
+  const institutionName = location.state?.institutionName || queryParams.get("name") || "State Civil Service Agency";
+  const statusGrade = location.state?.statusGrade || queryParams.get("grade") || "Unknown";
   const { data, isLoading, error } = useGetPreviewData(file_id);
 
   const sortedData = React.useMemo(() => {
