@@ -8,14 +8,23 @@ import {
   Terminal,
   X,
   List,
+  Sparkles,
 } from "lucide-react";
-import { useState, Fragment, useEffect } from "react";
+import { useState, Fragment, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import useUploadFile from "./hooks/useUploadFile";
 import useGetData from "./hooks/useGetData";
 import useSync, { listenToSyncStream } from "./hooks/useSync";
+import { activateCustomMapping, getCustomMapping } from "./hooks/useCustomMapping";
 import { ErrorPopOut } from "../../components/PopOut/ErrorPopOut";
 import { SuccessPopOut } from "../../components/PopOut/SuccessPopOut";
+import CustomMappingWeightModal from "./components/Custommapingweightmodal";
+
+// PENTING: grade yang dikembalikan /graded_files itu HURUF (rg.grade_code
+// hasil JOIN ke tabel ref_grades di retrieval/repository.py), BUKAN angka
+// mentah dari kolom uploaded_files.grade. Setelah INSERT (6, 'F') ke
+// ref_grades, custom grade akan tampil sebagai string "F".
+const CUSTOM_GRADE = "F";
 
 const UploadAndGrading = () => {
   // ── URL State Management ──
@@ -52,6 +61,8 @@ const UploadAndGrading = () => {
     hasPrev,
   } = useGetData();
 
+  // grade dari API adalah huruf (ref_grades.grade_code), sudah dikonfirmasi
+  // dari response JSON aslinya ("grade": "A", "D", dst) — bukan angka.
   const getGradeClass = (grade) => {
     switch (grade) {
       case "A":
@@ -64,6 +75,8 @@ const UploadAndGrading = () => {
         return "bg-purple-200 text-purple-800";
       case "E":
         return "bg-red-200 text-red-800";
+      case CUSTOM_GRADE:
+        return "bg-indigo-200 text-indigo-800";
       default:
         return "bg-gray-200 text-gray-800";
     }
@@ -289,6 +302,90 @@ const UploadAndGrading = () => {
     }
   };
 
+  // ── Custom grading (grade 6) handlers ─────────────────────────────────
+  // Endpoint /graded_files belum tentu mengirim kolom is_custom_ready /
+  // custom_mapping_task_status (kolom baru), jadi status per-file untuk
+  // grade 6 diambil terpisah lewat GET /custom-mapping/{file_id}.
+  const [customMappingStatuses, setCustomMappingStatuses] = useState({});
+  const [customMappingModalFileId, setCustomMappingModalFileId] = useState(null);
+  const [activatingIds, setActivatingIds] = useState([]);
+
+  const fetchCustomMappingStatus = useCallback(async (fileId) => {
+    try {
+      const res = await getCustomMapping(fileId);
+      setCustomMappingStatuses((prev) => ({
+        ...prev,
+        [fileId]: {
+          custom_mapping_task_status: res.custom_mapping_task_status,
+          is_custom_ready: res.is_custom_ready,
+        },
+      }));
+    } catch (err) {
+      console.warn(
+        `Gagal ambil status custom mapping untuk ${fileId}:`,
+        err.message,
+      );
+    }
+  }, []);
+
+  // Ambil status awal untuk tiap row grade custom begitu data tabel berubah.
+  useEffect(() => {
+    if (!data || data.length === 0) return;
+    data
+      .filter((item) => item.grade === CUSTOM_GRADE)
+      .forEach((item) => fetchCustomMappingStatus(item.file_id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
+
+  // Selama ada row custom yang task-nya PROCESSING, poll ulang tiap 3 detik
+  // (pola sama dengan background refetch di useGetData).
+  useEffect(() => {
+    const processingIds = Object.entries(customMappingStatuses)
+      .filter(([, v]) => v.custom_mapping_task_status === "PROCESSING")
+      .map(([id]) => id);
+
+    if (processingIds.length === 0) return;
+
+    const interval = setInterval(() => {
+      processingIds.forEach((id) => fetchCustomMappingStatus(id));
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [customMappingStatuses, fetchCustomMappingStatus]);
+
+  const handleActivateCustomMapping = async (fileId) => {
+    setActivatingIds((prev) => [...prev, fileId]);
+    try {
+      await activateCustomMapping(fileId);
+      setCustomMappingStatuses((prev) => ({
+        ...prev,
+        [fileId]: {
+          custom_mapping_task_status: "PROCESSING",
+          is_custom_ready: false,
+        },
+      }));
+      SuccessPopOut(
+        "Diproses",
+        "info",
+        "AI sedang memetakan kolom file custom...",
+      );
+    } catch (err) {
+      console.error("Gagal activate custom mapping:", err);
+      ErrorPopOut();
+    } finally {
+      setActivatingIds((prev) => prev.filter((x) => x !== fileId));
+    }
+  };
+
+  const handleCustomMappingSaved = (fileId) => {
+    setCustomMappingModalFileId(null);
+    setCustomMappingStatuses((prev) => ({
+      ...prev,
+      [fileId]: { ...prev[fileId], is_custom_ready: true },
+    }));
+    refetch();
+  };
+
   if (error) {
     return (
       <div className="p-6">
@@ -296,6 +393,7 @@ const UploadAndGrading = () => {
           <h3 className="text-red-800 font-medium">Error Loading Page</h3>
           <p className="text-red-600 mt-1">{error.message}</p>
         </div>
+
       </div>
     );
   }
@@ -557,6 +655,18 @@ const UploadAndGrading = () => {
                         item.matching_task_status === "SUCCESS";
                       const isFailed = item.matching_task_status === "FAILED";
 
+                      // ── Grade 6 (custom): matching gak boleh dimulai sebelum
+                      // user mengonfirmasi field pairing + weight-nya.
+                      const isCustomGrade = item.grade === CUSTOM_GRADE;
+                      const customStatus =
+                        customMappingStatuses[item.file_id];
+                      const customTaskStatus =
+                        customStatus?.custom_mapping_task_status;
+                      const isCustomReady = customStatus?.is_custom_ready;
+                      const isActivating = activatingIds.includes(
+                        item.file_id,
+                      );
+
                       return (
                         <Fragment key={item.file_id || index}>
                           <tr className="bg-white border-b border-slate-200 hover:bg-gray-50">
@@ -577,7 +687,7 @@ const UploadAndGrading = () => {
                                   item.grade,
                                 )}`}
                               >
-                                Grade {item.grade}
+                                {isCustomGrade ? "Custom" : `Grade ${item.grade}`}
                               </span>
                             </td>
 
@@ -599,39 +709,88 @@ const UploadAndGrading = () => {
 
                             <td className="px-6 py-4">
                               <div className="flex items-center justify-center gap-2">
-                                <button
-                                  disabled={isRowProcessing || isSynced}
-                                  onClick={() => handleSync(item.file_id)}
-                                  className={`font-medium ${
-                                    isSynced
-                                      ? "text-green-600 cursor-not-allowed"
-                                      : isRowProcessing
-                                        ? "text-slate-400 cursor-not-allowed"
-                                        : isFailed
-                                          ? "text-red-600 hover:underline"
-                                          : "text-blue-600 hover:underline"
-                                  }`}
-                                >
-                                  {isSynced
-                                    ? "Synced"
-                                    : isRowProcessing
-                                      ? "Processing..."
-                                      : isFailed
-                                        ? "Failed (Retry)"
-                                        : "Start Synchronization"}
-                                </button>
+                                {isCustomGrade && !isCustomReady ? (
+                                  // ── Belum siap sync: tampilkan tahapan custom mapping ──
+                                  customTaskStatus === "PROCESSING" ? (
+                                    <span className="flex items-center gap-1.5 text-xs font-medium text-blue-600">
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                      AI Mapping Fields...
+                                    </span>
+                                  ) : customTaskStatus === "SUCCESS" ? (
+                                    <button
+                                      onClick={() =>
+                                        setCustomMappingModalFileId(
+                                          item.file_id,
+                                        )
+                                      }
+                                      className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-700 border border-indigo-200 hover:bg-indigo-50 rounded-lg px-3 py-1.5 transition-colors"
+                                    >
+                                      <Sparkles className="w-3.5 h-3.5" />
+                                      Review & Set Weights
+                                    </button>
+                                  ) : (
+                                    <button
+                                      disabled={isActivating}
+                                      onClick={() =>
+                                        handleActivateCustomMapping(
+                                          item.file_id,
+                                        )
+                                      }
+                                      className={`flex items-center gap-1.5 text-xs font-medium rounded-lg px-3 py-1.5 border transition-colors ${
+                                        isActivating
+                                          ? "text-slate-400 border-slate-200 cursor-not-allowed"
+                                          : customTaskStatus === "FAILED"
+                                            ? "text-red-600 border-red-200 hover:bg-red-50"
+                                            : "text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                                      }`}
+                                    >
+                                      {isActivating ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                      ) : (
+                                        <Sparkles className="w-3.5 h-3.5" />
+                                      )}
+                                      {customTaskStatus === "FAILED"
+                                        ? "Mapping Failed (Retry)"
+                                        : "Configure Custom Grading"}
+                                    </button>
+                                  )
+                                ) : (
+                                  <>
+                                    <button
+                                      disabled={isRowProcessing || isSynced}
+                                      onClick={() => handleSync(item.file_id)}
+                                      className={`font-medium ${
+                                        isSynced
+                                          ? "text-green-600 cursor-not-allowed"
+                                          : isRowProcessing
+                                            ? "text-slate-400 cursor-not-allowed"
+                                            : isFailed
+                                              ? "text-red-600 hover:underline"
+                                              : "text-blue-600 hover:underline"
+                                      }`}
+                                    >
+                                      {isSynced
+                                        ? "Synced"
+                                        : isRowProcessing
+                                          ? "Processing..."
+                                          : isFailed
+                                            ? "Failed (Retry)"
+                                            : "Start Synchronization"}
+                                    </button>
 
-                                {/* Tombol Log: Hanya muncul saat status = Processing */}
-                                {isRowProcessing && (
-                                  <button
-                                    onClick={() =>
-                                      setSelectedLogId(item.file_id)
-                                    }
-                                    className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
-                                    title="View Matching Log"
-                                  >
-                                    <Terminal className="w-4 h-4" />
-                                  </button>
+                                    {/* Tombol Log: Hanya muncul saat status = Processing */}
+                                    {isRowProcessing && (
+                                      <button
+                                        onClick={() =>
+                                          setSelectedLogId(item.file_id)
+                                        }
+                                        className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
+                                        title="View Matching Log"
+                                      >
+                                        <Terminal className="w-4 h-4" />
+                                      </button>
+                                    )}
+                                  </>
                                 )}
                               </div>
                             </td>
@@ -751,6 +910,15 @@ const UploadAndGrading = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* --- CUSTOM FIELD MAPPING MODAL (grade 6) --- */}
+      {customMappingModalFileId && (
+        <CustomMappingWeightModal
+          fileId={customMappingModalFileId}
+          onClose={() => setCustomMappingModalFileId(null)}
+          onSaved={handleCustomMappingSaved}
+        />
       )}
     </div>
   );

@@ -8,7 +8,7 @@ const BatchSynchronization = () => {
   // --- STATE UNTUK FILTER DAN PAGINATION ---
   const [searchInput, setSearchInput] = useState(""); // Menampung teks yang sedang diketik
   const [searchTerm, setSearchTerm] = useState(""); // Menampung teks yang sudah di-submit untuk pencarian
-  const [gradeFilter, setGradeFilter] = useState("1,2,3,4,5");
+  const [gradeFilter, setGradeFilter] = useState("1,2,3,4,5,6");
   const [statusFilter, setStatusFilter] = useState("1,2,3");
   const [page, setPage] = useState(1);
 
@@ -43,6 +43,7 @@ const BatchSynchronization = () => {
     C: "bg-orange-200 text-orange-800",
     D: "bg-purple-200 text-purple-800",
     E: "bg-red-200 text-red-800",
+    F: "bg-indigo-200 text-indigo-800",
   };
 
   const statusColor = {
@@ -211,12 +212,13 @@ const BatchSynchronization = () => {
               }}
               className="w-full sm:w-auto px-3 py-2 border border-slate-300 rounded-md text-sm"
             >
-              <option value="1,2,3,4,5">All Grade</option>
+              <option value="1,2,3,4,5,6">All Grade</option>
               <option value="1">Grade A</option>
               <option value="2">Grade B</option>
               <option value="3">Grade C</option>
               <option value="4">Grade D</option>
               <option value="5">Grade E</option>
+              <option value="6">Grade F (Custom)</option>
             </select>
 
             <select

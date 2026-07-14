@@ -9,7 +9,7 @@ const fetchSyncData = async ({ queryKey }) => {
     params: {
       page: filters.page || 1,
       institution_name: filters.institution_name || '',
-      grade: filters.grade || '1,2,3,4,5',
+      grade: filters.grade || '1,2,3,4,5,6',
       sync_status: filters.sync_status || '1,2,3'
     }
   });

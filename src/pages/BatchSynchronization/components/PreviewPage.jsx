@@ -51,6 +51,11 @@ const PreviewPage = () => {
       description: "This data contains typos or non-standard formats.",
       color: "red",
     },
+    F: {
+      title: "Custom Grade: User-Defined Field Mapping",
+      description: "This data was matched using field pairing and weights configured manually, not a standard grading pattern.",
+      color: "indigo",
+    },
   };
 
   const summary = summaryMap[statusGrade];
@@ -78,6 +83,12 @@ const PreviewPage = () => {
       border: "border-yellow-500",
       title: "text-yellow-800",
       desc: "text-yellow-700",
+    },
+    indigo: {
+      bg: "bg-indigo-50",
+      border: "border-indigo-500",
+      title: "text-indigo-800",
+      desc: "text-indigo-700",
     },
   };
   const color = colorClassMap[summary?.color];
