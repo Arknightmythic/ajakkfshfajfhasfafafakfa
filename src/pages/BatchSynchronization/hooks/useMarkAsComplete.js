@@ -1,8 +1,11 @@
 import { useMutation } from "@tanstack/react-query";
 import axiosInstance from "../../../axios/axiosInstance";
 
-const markAsComplete = async (metadata_id) => {
-  const res = await axiosInstance.general.post(`/sync/mark-as-done/${metadata_id}`);
+// Endpoint sebenarnya: PATCH /mark-as-completed/files/{file_id}
+// (lihat retrieval/routes.py). Sebelumnya hook ini menembak
+// POST /sync/mark-as-done/{id} yang tidak pernah ada di backend (404).
+const markAsComplete = async (file_id) => {
+  const res = await axiosInstance.general.patch(`/mark-as-completed/files/${file_id}`);
   return res.data;
 };
 

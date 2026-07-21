@@ -15,12 +15,9 @@ const InvestigatePage = () => {
   const queryClient = useQueryClient();
 
   const queryParams = new URLSearchParams(location.search);
-  
+
   const file_id = location.state?.metadata_id || queryParams.get("file_id");
-  const institutionName = location.state?.institutionName || queryParams.get("name") || "Investigation Mode";
-  const statusGrade = location.state?.statusGrade || queryParams.get("grade") || "Unknown";
-  
-  
+
   const [page, setPage] = useState(1);
   const [selectedIndexes, setSelectedIndexes] = useState([]);
   const [selectedMatchIndex, setSelectedMatchIndex] = useState(null);
@@ -29,6 +26,13 @@ const InvestigatePage = () => {
   // Fetch API dengan parameter page
   const { data: responseData, isLoading, error } = useGetInvestigationData(file_id, page);
   const { mutateAsync: postMatchData } = usePostMatchData();
+
+  // institution_name & grade dari backend (diturunkan langsung dari file_id)
+  // diprioritaskan di atas state/query param — supaya halaman ini tampil
+  // identik baik dibuka dari tombol List maupun dari link luar (chatbot, dll)
+  // yang mungkin cuma bawa file_id tanpa name/grade.
+  const institutionName = responseData?.institution_name || location.state?.institutionName || queryParams.get("name") || "Investigation Mode";
+  const statusGrade = responseData?.grade || location.state?.statusGrade || queryParams.get("grade") || "Unknown";
 
   // PERBAIKAN: Bungkus dataList dengan useMemo agar referensi memori stabil
   const dataList = useMemo(() => responseData?.data || [], [responseData?.data]);

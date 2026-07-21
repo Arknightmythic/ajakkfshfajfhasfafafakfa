@@ -3,8 +3,13 @@ import axiosInstance from '../../../axios/axiosInstance';
 
 const getPreviewData = async (file_id) => {
   const res = await axiosInstance.general.get(`/preview-data/${file_id}`);
-  
-  return res.data.data; 
+
+  // Kembalikan full body (bukan cuma res.data.data) — backend sekarang juga
+  // menyertakan institution_name & grade di sini, dipakai PreviewPage.jsx
+  // sebagai sumber kebenaran tunggal supaya tampilannya selalu sama baik
+  // dibuka lewat tombol List maupun lewat link (mis. dari chatbot) yang
+  // mungkin tidak membawa query param institutionName/grade.
+  return res.data;
 };
 
 const useGetPreviewData = (file_id) => {

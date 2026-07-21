@@ -25,8 +25,8 @@ const AuditTrail = () => {
   } = useAuditSummary(period, dateRange, refreshInterval);
 
   // Fetch logs untuk masing-masing tabel
-  const audit = useAuditLogs(period, dateRange, refreshInterval, 1);
-  const access = useAccessLogs(period, dateRange, refreshInterval, 1);
+  const audit = useAuditLogs(period, dateRange, refreshInterval, 1, activeTableTab === "audit");
+  const access = useAccessLogs(period, dateRange, refreshInterval, 1, activeTableTab === "access");
 
   const TABS = [
     { id: "daily", label: "Today" },

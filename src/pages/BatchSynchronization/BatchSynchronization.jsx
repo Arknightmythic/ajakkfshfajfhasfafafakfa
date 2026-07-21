@@ -108,8 +108,11 @@ const BatchSynchronization = () => {
       });
     };
 
-    // Panggil stream listener
-    listenToSyncStream(selectedLogId, onLog)
+    // Panggil stream listener. stopKeyword harus "__MATCHING_DONE__" karena itu
+    // sentinel yang dikirim backend saat matching SUKSES — lihat komentar di
+    // useSync.js. Sebelumnya parameter ini tidak dioper sehingga stream sukses
+    // tidak pernah ditutup dan dilaporkan sebagai gagal (BUG_FIXING_GUIDE.md #1).
+    listenToSyncStream(selectedLogId, onLog, "__MATCHING_DONE__")
       .then((result) => {
         if (!isMounted) return;
         if (result && result.matching_task_status === "SUCCESS") {

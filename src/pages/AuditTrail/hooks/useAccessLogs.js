@@ -1,43 +1,51 @@
-import { useState, useEffect } from 'react';
-import axiosInstance from '../../../axios/axiosInstance';
+import { useEffect, useState } from "react";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import axiosInstance from "../../../axios/axiosInstance";
 
-const useAccessLogs = (period, dateRange, refreshInterval, initialPage = 1) => {
-  const [logs, setLogs] = useState([]);
-  const [loading, setLoading] = useState(false);
+// enabled dipakai untuk gating tab: tabel yang tidak sedang ditampilkan tidak
+// perlu fetch/poll (menghemat request — di versi lama kedua tabel selalu jalan).
+const useAccessLogs = (
+  period,
+  dateRange,
+  refreshInterval,
+  initialPage = 1,
+  enabled = true,
+) => {
   const [page, setPage] = useState(initialPage);
-  const [totalPages, setTotalPages] = useState(1);
 
-  useEffect(() => { setPage(1); }, [period, dateRange]);
-
+  // Reset ke halaman 1 setiap kali filter berubah.
   useEffect(() => {
-    const fetchLogs = async () => {
-      try {
-        let params = `?page=${page}&period=${period}`;
-        if (period === 'custom' && dateRange.start && dateRange.end) {
-          params += `&start_date=${dateRange.start}&end_date=${dateRange.end}`;
-        }
-        // Tembak endpoint access
-        const res = await axiosInstance.general.get(`/access/logs${params}`);
-        setLogs(res.data.data);
-        setPage(res.data.page);
-        setTotalPages(res.data.total_pages);
-      } catch (error) {
-        console.error("Gagal refresh access log:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    setPage(1);
+  }, [period, dateRange]);
 
-    setLoading(true); 
-    fetchLogs();
+  const params = { page, period };
+  if (period === "custom" && dateRange?.start && dateRange?.end) {
+    params.start_date = dateRange.start;
+    params.end_date = dateRange.end;
+  }
 
-    if (refreshInterval > 0) {
-      const intervalId = setInterval(fetchLogs, refreshInterval);
-      return () => clearInterval(intervalId);
-    }
-  }, [page, period, dateRange, refreshInterval]);
+  const query = useQuery({
+    queryKey: ["access", "logs", params],
+    queryFn: async () => {
+      const res = await axiosInstance.general.get("/access/logs", { params });
+      return res.data;
+    },
+    enabled,
+    refetchInterval: refreshInterval > 0 ? refreshInterval : false,
+    refetchOnWindowFocus: false,
+    // Saat pindah halaman, tahan data lama supaya tabel tidak "kedip" kosong.
+    placeholderData: keepPreviousData,
+  });
 
-  return { logs, loading, page, setPage, totalPages };
+  return {
+    logs: query.data?.data ?? [],
+    // isFetching supaya indikator loading tetap muncul saat ganti halaman,
+    // meski placeholderData menahan data lama.
+    loading: query.isFetching,
+    page,
+    setPage,
+    totalPages: query.data?.total_pages ?? 1,
+  };
 };
 
 export default useAccessLogs;

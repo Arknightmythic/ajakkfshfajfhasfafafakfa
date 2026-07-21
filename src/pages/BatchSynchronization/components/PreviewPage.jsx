@@ -9,17 +9,22 @@ const PreviewPage = () => {
   const location = useLocation();
 
   const queryParams = new URLSearchParams(location.search);
-  
+
   const file_id = location.state?.metadata_id || queryParams.get("file_id");
-  const institutionName = location.state?.institutionName || queryParams.get("name") || "State Civil Service Agency";
-  const statusGrade = location.state?.statusGrade || queryParams.get("grade") || "Unknown";
   const { data, isLoading, error } = useGetPreviewData(file_id);
 
-  const sortedData = React.useMemo(() => {
-    if (!data) return { match: [], unmatch: [] };
+  // institution_name & grade dari backend (diturunkan langsung dari file_id)
+  // diprioritaskan di atas state/query param — supaya halaman ini tampil
+  // identik baik dibuka dari tombol List maupun dari link luar (chatbot, dll)
+  // yang mungkin cuma bawa file_id tanpa name/grade.
+  const institutionName = data?.institution_name || location.state?.institutionName || queryParams.get("name") || "State Civil Service Agency";
+  const statusGrade = data?.grade || location.state?.statusGrade || queryParams.get("grade") || "Unknown";
 
-    const sortedMatch = [...(data.match || [])].sort((a, b) => a.institution.id - b.institution.id);
-    const sortedUnmatch = [...(data.unmatch || [])].sort((a, b) => a.institution.id - b.institution.id);
+  const sortedData = React.useMemo(() => {
+    if (!data?.data) return { match: [], unmatch: [] };
+
+    const sortedMatch = [...(data.data.match || [])].sort((a, b) => a.institution.id - b.institution.id);
+    const sortedUnmatch = [...(data.data.unmatch || [])].sort((a, b) => a.institution.id - b.institution.id);
 
     return { match: sortedMatch, unmatch: sortedUnmatch };
   }, [data]);

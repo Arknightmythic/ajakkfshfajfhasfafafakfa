@@ -2,8 +2,12 @@ import { useMutation } from '@tanstack/react-query';
 import axiosInstance from '../../../axios/axiosInstance';
 
 // 1. Fungsi ini DI-EXPORT TERPISAH agar bisa dipanggil saat RECONNECT (Refresh)
-// Tambahkan parameter stopKeyword (default ke __DONE__)
-export const listenToSyncStream = (id, onLog, stopKeyword = '__DONE__') => {
+// Default stopKeyword = '__MATCHING_DONE__' karena itu satu-satunya sentinel yang
+// dikirim backend saat matching SUKSES (lihat processing/tasks.py push_log).
+// '__DONE__' backend HANYA mengirimkannya di jalur FAILED, jadi kalau default ini
+// tetap '__DONE__', pemanggil yang lupa mengoper stopKeyword akan menunggu sampai
+// timeout 15 menit walau matching-nya sudah sukses (lihat BUG_FIXING_GUIDE.md #1).
+export const listenToSyncStream = (id, onLog, stopKeyword = '__MATCHING_DONE__') => {
   return new Promise((resolve, reject) => {
     const baseURL = axiosInstance.general.defaults.baseURL;
     const url     = `${baseURL}/match/stream/${id}`;
@@ -62,7 +66,7 @@ export const listenToSyncStream = (id, onLog, stopKeyword = '__DONE__') => {
 };
 
 // Tambahkan support stopKeyword untuk syncByGrade
-const syncByGrade = async ({ id, onLog, stopKeyword = '__DONE__' }) => {
+const syncByGrade = async ({ id, onLog, stopKeyword = '__MATCHING_DONE__' }) => {
   await axiosInstance.general.post(`/match/?file_id=${id}`, null);
   return listenToSyncStream(id, onLog, stopKeyword);
 };
